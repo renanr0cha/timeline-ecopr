@@ -1,5 +1,5 @@
 import React from 'react';
-import { SafeAreaView, ScrollView, StyleSheet, View, ViewStyle } from 'react-native';
+import { SafeAreaView, ScrollView, View, ViewStyle } from 'react-native';
 
 interface ScreenContentProps {
   children: React.ReactNode;
@@ -11,7 +11,7 @@ interface ScreenContentProps {
 /**
  * Wrapper component for screen content
  * Provides consistent styling and behavior for all screens
- * 
+ *
  * @param children - Child components to render
  * @param style - Additional style to apply
  * @param scrollable - Whether content should be scrollable
@@ -23,25 +23,18 @@ export function ScreenContent({
   scrollable = false,
   padding = true,
 }: ScreenContentProps) {
-  const containerStyle = [
-    styles.container,
-    padding && styles.padding,
-    style,
-  ];
-
   const renderContent = () => (
-    <View style={containerStyle}>
+    <View className={`flex-1 ${padding ? 'p-4' : ''}`} style={style}>
       {children}
     </View>
   );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView className="flex-1 bg-slate-50">
       {scrollable ? (
-        <ScrollView 
-          style={styles.scrollView}
-          contentContainerStyle={padding && styles.scrollContent}
-        >
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={padding ? { paddingHorizontal: 16 } : undefined}>
           {renderContent()}
         </ScrollView>
       ) : (
@@ -50,22 +43,3 @@ export function ScreenContent({
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#f8fafc',
-  },
-  container: {
-    flex: 1,
-  },
-  padding: {
-    padding: 16,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 16,
-  },
-});
