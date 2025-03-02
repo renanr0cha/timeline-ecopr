@@ -188,6 +188,7 @@ export const timelineService = {
     }
 
     try {
+      // First get the device record to link to
       const { data: deviceData, error: deviceError } = await supabase
         .from('devices')
         .select('id')
@@ -204,12 +205,15 @@ export const timelineService = {
         throw new Error('Device not found');
       }
 
+      // Then update the entry with the device ID constraint
+      const updatePayload = {
+        ...updates,
+        updated_at: new Date().toISOString(),
+      };
+
       const { data, error } = await supabase
         .from('timeline_entries')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updatePayload)
         .eq('id', entryId)
         .eq('device_id', deviceData.id);
 
@@ -264,6 +268,7 @@ export const timelineService = {
     }
 
     try {
+      // First get the device record to link to
       const { data: deviceData, error: deviceError } = await supabase
         .from('devices')
         .select('id')
@@ -280,6 +285,7 @@ export const timelineService = {
         throw new Error('Device not found');
       }
 
+      // Then delete entries matching both the entry ID and device ID
       const { error } = await supabase
         .from('timeline_entries')
         .delete()
