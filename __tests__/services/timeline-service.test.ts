@@ -2,6 +2,7 @@
  * Tests for the timeline service functionality
  */
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+
 import { timelineService } from '../../src/services/timeline-service';
 import { EntryType } from '../../src/types';
 import { ValidationError } from '../../src/types/errors';
@@ -9,8 +10,8 @@ import { ValidationError } from '../../src/types/errors';
 // Mock supabase - simplified approach to focus on validation tests
 jest.mock('../../src/lib/supabase', () => ({
   supabase: {
-    from: jest.fn()
-  }
+    from: jest.fn(),
+  },
 }));
 
 // Mock Logger
@@ -18,8 +19,8 @@ jest.mock('../../src/lib/logger', () => ({
   logger: {
     info: jest.fn(),
     error: jest.fn(),
-    warn: jest.fn()
-  }
+    warn: jest.fn(),
+  },
 }));
 
 describe('Timeline Service', () => {
@@ -29,12 +30,12 @@ describe('Timeline Service', () => {
 
   describe('addEntry', () => {
     it('should throw error if device ID is not provided', async () => {
-      await expect(
-        timelineService.addEntry('', 'aor' as EntryType, '2023-06-01')
-      ).rejects.toThrow(ValidationError);
-      await expect(
-        timelineService.addEntry('', 'aor' as EntryType, '2023-06-01')
-      ).rejects.toThrow('Required field is missing: deviceId');
+      await expect(timelineService.addEntry('', 'aor' as EntryType, '2023-06-01')).rejects.toThrow(
+        ValidationError
+      );
+      await expect(timelineService.addEntry('', 'aor' as EntryType, '2023-06-01')).rejects.toThrow(
+        'Required field is missing: deviceId'
+      );
     });
 
     // Skip the successful case test as it requires complex mocking
@@ -77,21 +78,17 @@ describe('Timeline Service', () => {
 
   describe('deleteEntry', () => {
     it('should throw error if device ID is not provided', async () => {
-      await expect(
-        timelineService.deleteEntry('', 'entry-id')
-      ).rejects.toThrow(ValidationError);
-      await expect(
-        timelineService.deleteEntry('', 'entry-id')
-      ).rejects.toThrow('Required field is missing: deviceId');
+      await expect(timelineService.deleteEntry('', 'entry-id')).rejects.toThrow(ValidationError);
+      await expect(timelineService.deleteEntry('', 'entry-id')).rejects.toThrow(
+        'Required field is missing: deviceId'
+      );
     });
 
     it('should throw error if entry ID is not provided', async () => {
-      await expect(
-        timelineService.deleteEntry('device-id', '')
-      ).rejects.toThrow(ValidationError);
-      await expect(
-        timelineService.deleteEntry('device-id', '')
-      ).rejects.toThrow('Required field is missing: entryId');
+      await expect(timelineService.deleteEntry('device-id', '')).rejects.toThrow(ValidationError);
+      await expect(timelineService.deleteEntry('device-id', '')).rejects.toThrow(
+        'Required field is missing: entryId'
+      );
     });
 
     // Skip the successful case test as it requires complex mocking
@@ -99,4 +96,4 @@ describe('Timeline Service', () => {
       // Implementation would go here if needed
     });
   });
-}); 
+});

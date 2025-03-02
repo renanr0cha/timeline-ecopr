@@ -58,10 +58,19 @@ yarn install
 
 3. Create a `.env` file in the root directory with your Supabase credentials:
 
+```bash
+# Copy from .env.example
+cp .env.example .env
 ```
-SUPABASE_URL=your_supabase_url_here
-SUPABASE_ANON_KEY=your_supabase_anon_key_here
+
+Then edit the `.env` file to add your Supabase credentials:
+
 ```
+SUPABASE_URL=https://your-project-id.supabase.co
+SUPABASE_ANON_KEY=your-anon-key-goes-here
+```
+
+> **Important**: Never commit your `.env` file to version control. It contains sensitive information.
 
 4. Start the development server:
 
