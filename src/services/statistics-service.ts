@@ -4,7 +4,7 @@ interface StatisticsFilter {
   transitionType?: 'aor_to_p2' | 'p2_to_ecopr' | 'ecopr_to_prcard' | null;
 }
 
-export const StatisticsService = {
+export const statisticsService = {
   /**
    * Gets community statistics with optional filtering
    */

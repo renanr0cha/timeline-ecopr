@@ -1,12 +1,11 @@
-import { ScreenContent } from 'components/screen-content'; // Updated import path
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 
 import './global.css';
-import { registerDeviceWithSupabase } from './src/lib/device-id'; // Updated import path
+import { registerDeviceWithSupabase } from './src/lib/device-id';
 import { supabase } from './src/lib/supabase';
-
+import { AppNavigator } from './src/navigation/app-navigator';
 
 export default function App() {
   const [initialized, setInitialized] = useState(false);
@@ -42,19 +41,27 @@ export default function App() {
     );
   }
 
-  return (
-    <>
-      <ScreenContent title="Timeline ecoPR" path="App.tsx" />
-      {error && (
+  if (error) {
+    return (
+      <View className="flex-1 items-center justify-center bg-white">
         <View className="m-4 rounded-md bg-red-100 p-4">
           <Text className="text-red-700">{error}</Text>
         </View>
-      )}
-      {deviceId && (
-        <View className="p-4">
-          <Text className="text-gray-500">Device ID: {deviceId}</Text>
-        </View>
-      )}
+      </View>
+    );
+  }
+
+  if (!deviceId) {
+    return (
+      <View className="flex-1 items-center justify-center bg-white">
+        <Text>Failed to initialize device ID</Text>
+      </View>
+    );
+  }
+
+  return (
+    <>
+      <AppNavigator deviceId={deviceId} />
       <StatusBar style="auto" />
     </>
   );

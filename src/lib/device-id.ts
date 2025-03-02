@@ -1,7 +1,8 @@
 import * as Application from 'expo-application';
 import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 
-const DEVICE_ID_KEY = 'timelineEcoPR.deviceId';
+const DEVICE_ID_KEY = 'timeline-ecopr.device-id';
 
 /**
  * Retrieves existing device ID from secure storage or creates a new one
@@ -9,19 +10,36 @@ const DEVICE_ID_KEY = 'timelineEcoPR.deviceId';
 export const getOrCreateDeviceId = async (): Promise<string> => {
   try {
     // Try to get existing ID from secure storage
-    let deviceId = await SecureStore.getItemAsync(DEVICE_ID_KEY);
+    const storedDeviceId = await SecureStore.getItemAsync(DEVICE_ID_KEY);
 
+    if (storedDeviceId) {
+      return storedDeviceId;
+    }
+    
+    // Generate a new device ID using the correct API methods
+    let deviceId = '';
+    
+    try {
+      // These methods might not be available on all platforms
+      if (Platform.OS === 'android') {
+        deviceId = Application.getAndroidId() || '';
+      } 
+      if (!deviceId && Platform.OS === 'ios') {
+        // iOS ID is async
+        const iosId = await Application.getIosIdForVendorAsync();
+        deviceId = iosId || '';
+      }
+    } catch (platformError) {
+      console.error('Error getting platform ID:', platformError);
+    }
+    
+    // If no platform ID available, generate a random one
     if (!deviceId) {
-      // Generate a new device ID
-      deviceId =
-        Application.androidId ||
-        Application.iosIdForVendor ||
-        `device_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
-
-      // Store it securely
-      await SecureStore.setItemAsync(DEVICE_ID_KEY, deviceId);
+      deviceId = `device_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
     }
 
+    // Store it securely
+    await SecureStore.setItemAsync(DEVICE_ID_KEY, deviceId);
     return deviceId;
   } catch (error) {
     console.error('Error managing device ID:', error);

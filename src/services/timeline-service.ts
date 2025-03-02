@@ -9,7 +9,7 @@ interface TimelineEntry {
   notes?: string;
 }
 
-export const TimelineService = {
+export const timelineService = {
   /**
    * Adds a new timeline entry or updates an existing one
    */
