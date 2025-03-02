@@ -3,9 +3,21 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 import 'react-native-url-polyfill/auto';
 
+// Check environment variables and warn instead of throwing errors
+if (!SUPABASE_URL) {
+  console.warn('SUPABASE_URL is not defined in environment variables');
+}
+
+if (!SUPABASE_ANON_KEY) {
+  console.warn('SUPABASE_ANON_KEY is not defined in environment variables');
+}
+
 // Use environment variables for Supabase configuration
-const supabaseUrl = SUPABASE_URL;
-const supabaseAnonKey = SUPABASE_ANON_KEY;
+const supabaseUrl = SUPABASE_URL || '';
+const supabaseAnonKey = SUPABASE_ANON_KEY || '';
+
+console.log('Initializing Supabase client with URL:', supabaseUrl ? 'Configured' : 'MISSING');
+console.log('Supabase key status:', supabaseAnonKey ? 'Configured' : 'MISSING');
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
@@ -20,6 +32,11 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
  * Sets the device context in Supabase for Row Level Security
  */
 export const setDeviceContext = async (deviceId: string): Promise<void> => {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error('Cannot set device context: Supabase configuration is missing');
+    return;
+  }
+
   try {
     await supabase.rpc('set_device_context', { device_id: deviceId });
   } catch (error) {

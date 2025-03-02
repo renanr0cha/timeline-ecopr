@@ -1,6 +1,6 @@
 /**
  * Custom error classes for the Timeline-ecoPR application
- * 
+ *
  * These error classes provide more specific error handling
  * capabilities and improve error messaging throughout the app.
  */
@@ -88,4 +88,4 @@ export class NetworkError extends ApplicationError {
     this.originalError = originalError;
     Object.setPrototypeOf(this, NetworkError.prototype);
   }
-} 
+}

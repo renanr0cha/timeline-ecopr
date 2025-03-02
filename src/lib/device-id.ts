@@ -52,11 +52,23 @@ export const getOrCreateDeviceId = async (): Promise<string> => {
  * Registers device with Supabase and sets the security context
  */
 export const registerDeviceWithSupabase = async (supabaseClient: any): Promise<string> => {
+  // Validate the Supabase client before proceeding
+  if (!supabaseClient || typeof supabaseClient.rpc !== 'function') {
+    console.error('Invalid Supabase client provided');
+    throw new Error('Supabase client misconfigured - check your environment variables');
+  }
+
+  // Get the device ID
   const deviceId = await getOrCreateDeviceId();
 
   try {
-    // Set device context for Row Level Security
-    await supabaseClient.rpc('set_device_context', { device_id: deviceId });
+    // Try to set device context for Row Level Security
+    try {
+      await supabaseClient.rpc('set_device_context', { device_id: deviceId });
+    } catch (contextError) {
+      console.error('Error setting device context:', contextError);
+      // Continue despite context error - some operations might still work
+    }
 
     // Register or update the device record
     const { error } = await supabaseClient.from('devices').upsert(
@@ -67,11 +79,25 @@ export const registerDeviceWithSupabase = async (supabaseClient: any): Promise<s
       { onConflict: 'device_identifier' }
     );
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase upsert error:', error);
+      throw new Error(`Failed to register device: ${error.message}`);
+    }
 
     return deviceId;
   } catch (error) {
     console.error('Error registering device:', error);
-    return deviceId; // Still return the ID even if registration fails
+
+    // Check if this might be an environment variable issue
+    if (
+      error instanceof Error &&
+      (error.message.includes('URL') ||
+        error.message.includes('key') ||
+        error.message.includes('configuration'))
+    ) {
+      throw new Error('Supabase connection failed - check your environment variables');
+    }
+
+    throw error; // Re-throw for App component to handle
   }
 };

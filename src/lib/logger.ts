@@ -6,15 +6,13 @@
 // Global declaration for __DEV__ from React Native
 declare const __DEV__: boolean;
 
-type LogLevel = 'debug' | 'info' | 'warn' | 'error';
-
 interface LogContext {
   [key: string]: any;
 }
 
 /**
  * Formats a log message with context data
- * 
+ *
  * @param message - Log message
  * @param context - Additional context data
  * @returns Formatted message string
@@ -23,10 +21,11 @@ const formatMessage = (message: string, context?: LogContext): string => {
   if (!context || Object.keys(context).length === 0) {
     return message;
   }
-  
+
   try {
     return `${message} ${JSON.stringify(context)}`;
-  } catch (e) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  } catch (_) {
     return `${message} [Error serializing context]`;
   }
 };
@@ -37,7 +36,7 @@ const formatMessage = (message: string, context?: LogContext): string => {
 export const logger = {
   /**
    * Log a debug message
-   * 
+   *
    * @param message - Debug message
    * @param context - Optional context data
    */
@@ -49,7 +48,7 @@ export const logger = {
 
   /**
    * Log an info message
-   * 
+   *
    * @param message - Info message
    * @param context - Optional context data
    */
@@ -59,7 +58,7 @@ export const logger = {
 
   /**
    * Log a warning message
-   * 
+   *
    * @param message - Warning message
    * @param context - Optional context data
    */
@@ -69,7 +68,7 @@ export const logger = {
 
   /**
    * Log an error message
-   * 
+   *
    * @param message - Error message
    * @param context - Optional context data
    */
@@ -79,23 +78,23 @@ export const logger = {
 
   /**
    * Create a child logger with predefined context
-   * 
+   *
    * @param baseContext - Base context to include in all logs
    * @returns A new logger instance with the base context
    */
   createChildLogger(baseContext: LogContext) {
     return {
-      debug: (message: string, context?: LogContext) => 
+      debug: (message: string, context?: LogContext) =>
         this.debug(message, { ...baseContext, ...context }),
-      
-      info: (message: string, context?: LogContext) => 
+
+      info: (message: string, context?: LogContext) =>
         this.info(message, { ...baseContext, ...context }),
-      
-      warn: (message: string, context?: LogContext) => 
+
+      warn: (message: string, context?: LogContext) =>
         this.warn(message, { ...baseContext, ...context }),
-      
-      error: (message: string, context?: LogContext) => 
+
+      error: (message: string, context?: LogContext) =>
         this.error(message, { ...baseContext, ...context }),
     };
-  }
-}; 
+  },
+};

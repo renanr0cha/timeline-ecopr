@@ -50,9 +50,10 @@ export interface DeviceData {
  * Navigation parameters for stack navigator
  */
 export type RootStackParamList = {
-  Home: undefined;
-  AddEntry: { entryType?: EntryType; entryId?: string };
-  Statistics: undefined;
+  Home: { deviceId: string };
+  AddEntry: { deviceId: string; entryType?: EntryType; entryId?: string };
+  Statistics: { deviceId: string };
+  MockDataDemo: undefined;
 };
 
 /**
@@ -93,4 +94,4 @@ export interface SupabaseError {
   message: string;
   hint?: string;
   details?: string;
-} 
+}

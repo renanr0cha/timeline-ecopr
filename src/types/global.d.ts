@@ -11,4 +11,4 @@ declare global {
   const afterEach: typeof import('@jest/globals').afterEach;
   const beforeAll: typeof import('@jest/globals').beforeAll;
   const afterAll: typeof import('@jest/globals').afterAll;
-} 
+}
