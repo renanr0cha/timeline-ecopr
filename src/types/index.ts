@@ -13,6 +13,7 @@ export type EntryType = 'aor' | 'p2' | 'ecopr' | 'pr_card';
  */
 export interface TimelineEntry {
   id?: string;
+  device_id?: string;
   entry_type: EntryType;
   entry_date: string;
   notes?: string;
@@ -65,5 +66,28 @@ export interface EnvVariables {
 export interface ServiceError {
   code?: string;
   message: string;
+  details?: string;
+}
+
+// Define application-wide types
+export interface Device {
+  id: string;
+  device_identifier: string;
+  created_at?: string;
+  last_active?: string;
+}
+
+export interface CommunityStatistics {
+  entry_type: string;
+  count: number;
+  average_days: number;
+  min_days: number;
+  max_days: number;
+}
+
+export interface SupabaseError {
+  code: string;
+  message: string;
+  hint?: string;
   details?: string;
 } 

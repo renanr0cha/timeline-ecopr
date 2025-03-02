@@ -2,15 +2,7 @@ import { PostgrestError } from '@supabase/supabase-js';
 
 import { logger } from '../lib/logger';
 import { supabase } from '../lib/supabase';
-
-type EntryType = 'aor' | 'p2' | 'ecopr' | 'pr_card';
-
-interface TimelineEntry {
-  id?: string;
-  entry_type: EntryType;
-  entry_date: string;
-  notes?: string;
-}
+import { EntryType, TimelineEntry } from '../types';
 
 /**
  * Service for managing timeline entries
@@ -32,7 +24,7 @@ export const timelineService = {
     entryType: EntryType,
     entryDate: string,
     notes: string = ''
-  ): Promise<any> {
+  ): Promise<TimelineEntry> {
     if (!deviceId) {
       throw new Error('Device ID is required');
     }
@@ -79,7 +71,16 @@ export const timelineService = {
       }
 
       logger.info('Timeline entry added/updated successfully', { deviceId, entryType });
-      return data;
+      if (!data) {
+        // This should never happen if there was no error, but handle it just in case
+        return {
+          entry_type: entryType,
+          entry_date: entryDate,
+          notes,
+          device_id: deviceData.id
+        } as TimelineEntry;
+      }
+      return data as TimelineEntry;
     } catch (error) {
       // Specific handling for different error types
       if (error instanceof PostgrestError) {
@@ -148,7 +149,7 @@ export const timelineService = {
         deviceId,
         count: data?.length || 0,
       });
-      return data || [];
+      return (data || []) as TimelineEntry[];
     } catch (error) {
       if (error instanceof PostgrestError) {
         logger.error('Supabase error retrieving timeline', {
@@ -175,7 +176,7 @@ export const timelineService = {
     deviceId: string,
     entryId: string,
     updates: Partial<TimelineEntry>
-  ): Promise<any> {
+  ): Promise<TimelineEntry> {
     if (!deviceId) {
       logger.warn('Attempted to update entry with empty deviceId');
       throw new Error('Device ID is required');
@@ -210,7 +211,8 @@ export const timelineService = {
           updated_at: new Date().toISOString(),
         })
         .eq('id', entryId)
-        .eq('device_id', deviceData.id);
+        .eq('device_id', deviceData.id)
+        .select();
 
       if (error) {
         logger.error('Error updating timeline entry', { error, deviceId, entryId });
@@ -218,7 +220,15 @@ export const timelineService = {
       }
       
       logger.info('Timeline entry updated successfully', { deviceId, entryId });
-      return data;
+      if (!data || data.length === 0) {
+        // This should never happen if there was no error, but handle it just in case
+        return {
+          id: entryId,
+          ...updates,
+          device_id: deviceData.id
+        } as TimelineEntry;
+      }
+      return data[0] as TimelineEntry;
     } catch (error) {
       if (error instanceof PostgrestError) {
         logger.error('Supabase error updating timeline entry', {
