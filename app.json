@@ -26,12 +26,20 @@
     },
     "assetBundlePatterns": ["**/*"],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.timeline.ecopr"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
+      },
+      "package": "com.timeline.ecopr"
+    },
+    "newArchEnabled": true,
+    "extra": {
+      "eas": {
+        "projectId": "timeline-ecopr"
       }
     }
   }
