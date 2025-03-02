@@ -149,13 +149,13 @@ describe('Timeline Service', () => {
 
       // Mock successful entry update
       const mockEntryResponse: MockEntryResponse = {
-        data: [{ 
+        data: { 
           id: 'entry-uuid', 
           device_id: 'device-uuid',
           entry_type: 'aor', 
           entry_date: '2023-06-01',
           notes: 'Updated notes'
-        }] as TimelineEntry[],
+        } as TimelineEntry,
         error: null,
       };
 
@@ -165,7 +165,7 @@ describe('Timeline Service', () => {
       const mockUpdate = jest.fn().mockReturnThis();
       const mockEq = jest.fn().mockReturnThis();
       const mockSingle = jest.fn<() => Promise<MockDeviceResponse>>().mockResolvedValue(mockDeviceResponse);
-      const mockSelectAfterUpdate = jest.fn<() => Promise<MockEntryResponse>>().mockResolvedValue(mockEntryResponse);
+      const mockUpdateFinal = jest.fn<() => Promise<MockEntryResponse>>().mockResolvedValue(mockEntryResponse);
 
       // Mock supabase chain for device query
       (supabase.from as jest.Mock)
@@ -180,9 +180,7 @@ describe('Timeline Service', () => {
         .mockImplementationOnce(() => ({
           update: mockUpdate.mockReturnValue({
             eq: mockEq.mockReturnValue({
-              eq: mockEq.mockReturnValue({
-                select: mockSelectAfterUpdate,
-              }),
+              eq: mockEq.mockReturnValue(mockUpdateFinal),
             }),
           }),
         }));
@@ -210,9 +208,10 @@ describe('Timeline Service', () => {
       expect(mockEq).toHaveBeenCalledWith('id', 'entry-uuid');
       // Second eq should be for device ID
       expect(mockEq).toHaveBeenCalledWith('device_id', 'device-uuid');
+      expect(mockUpdateFinal).toHaveBeenCalled();
 
       // Verify the result
-      expect(result).toEqual((mockEntryResponse.data as TimelineEntry[])[0]);
+      expect(result).toEqual(mockEntryResponse.data);
     });
   });
 

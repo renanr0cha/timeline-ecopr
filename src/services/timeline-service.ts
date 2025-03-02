@@ -211,8 +211,7 @@ export const timelineService = {
           updated_at: new Date().toISOString(),
         })
         .eq('id', entryId)
-        .eq('device_id', deviceData.id)
-        .select();
+        .eq('device_id', deviceData.id);
 
       if (error) {
         logger.error('Error updating timeline entry', { error, deviceId, entryId });
@@ -220,7 +219,7 @@ export const timelineService = {
       }
       
       logger.info('Timeline entry updated successfully', { deviceId, entryId });
-      if (!data || data.length === 0) {
+      if (!data) {
         // This should never happen if there was no error, but handle it just in case
         return {
           id: entryId,
@@ -228,7 +227,8 @@ export const timelineService = {
           device_id: deviceData.id
         } as TimelineEntry;
       }
-      return data[0] as TimelineEntry;
+      // In some versions of Supabase, the data might be an array or single object
+      return Array.isArray(data) ? data[0] as TimelineEntry : data as TimelineEntry;
     } catch (error) {
       if (error instanceof PostgrestError) {
         logger.error('Supabase error updating timeline entry', {
