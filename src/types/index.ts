@@ -3,6 +3,9 @@
  * This file centralizes type definitions used across the application
  */
 
+// Re-export all custom error types
+export * from './errors';
+
 /**
  * Entry types for timeline entries
  */

@@ -2,7 +2,15 @@ import { PostgrestError } from '@supabase/supabase-js';
 
 import { logger } from '../lib/logger';
 import { supabase } from '../lib/supabase';
-import { EntryType, TimelineEntry } from '../types';
+import {
+  DatabaseError,
+  DeviceNotFoundError,
+  EntryNotFoundError,
+  EntryType,
+  NetworkError,
+  TimelineEntry,
+  ValidationError
+} from '../types';
 
 /**
  * Service for managing timeline entries
@@ -17,7 +25,9 @@ export const timelineService = {
    * @param entryDate - Date of the entry in ISO format (YYYY-MM-DD)
    * @param notes - Optional notes for the entry
    * @returns Promise resolving to the created/updated entry
-   * @throws Error if device not found or database operation fails
+   * @throws ValidationError if required fields are missing
+   * @throws DeviceNotFoundError if device is not found
+   * @throws DatabaseError if a database operation fails
    */
   async addEntry(
     deviceId: string,
@@ -26,7 +36,8 @@ export const timelineService = {
     notes: string = ''
   ): Promise<TimelineEntry> {
     if (!deviceId) {
-      throw new Error('Device ID is required');
+      logger.warn('Attempted to add entry with empty deviceId');
+      throw new ValidationError('deviceId');
     }
 
     try {
@@ -40,15 +51,19 @@ export const timelineService = {
       if (deviceError) {
         if (deviceError.code === 'PGRST116') {
           logger.error('Device not found', { deviceId });
-          throw new Error('Device not found');
+          throw new DeviceNotFoundError(deviceId);
         }
         logger.error('Error retrieving device', { error: deviceError, deviceId });
-        throw deviceError;
+        throw new DatabaseError(deviceError.message, {
+          code: deviceError.code,
+          details: deviceError.details,
+          hint: deviceError.hint
+        });
       }
 
       if (!deviceData?.id) {
         logger.error('Device data missing ID', { deviceId });
-        throw new Error('Device not found');
+        throw new DeviceNotFoundError(deviceId);
       }
 
       // Then add the entry
@@ -67,7 +82,11 @@ export const timelineService = {
 
       if (error) {
         logger.error('Error adding timeline entry', { error, deviceId, entryType });
-        throw error;
+        throw new DatabaseError(error.message, {
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        });
       }
 
       logger.info('Timeline entry added/updated successfully', { deviceId, entryType });
@@ -82,7 +101,14 @@ export const timelineService = {
       }
       return data as TimelineEntry;
     } catch (error) {
-      // Specific handling for different error types
+      // Rethrow our custom errors
+      if (error instanceof ValidationError || 
+          error instanceof DeviceNotFoundError || 
+          error instanceof DatabaseError) {
+        throw error;
+      }
+      
+      // Handle Supabase errors
       if (error instanceof PostgrestError) {
         logger.error('Supabase error adding timeline entry', {
           code: error.code,
@@ -90,13 +116,17 @@ export const timelineService = {
           hint: error.hint,
           details: error.details,
         });
-        throw new Error(`Database error: ${error.message}`);
+        throw new DatabaseError(error.message, {
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        });
       } else if (error instanceof Error) {
         logger.error('Error adding timeline entry', { message: error.message });
-        throw error;
+        throw new NetworkError(`Failed to add timeline entry: ${error.message}`, error);
       } else {
         logger.error('Unknown error adding timeline entry', { error });
-        throw new Error('An unexpected error occurred');
+        throw new NetworkError('An unexpected error occurred when adding timeline entry');
       }
     }
   },
@@ -106,6 +136,7 @@ export const timelineService = {
    *
    * @param deviceId - Unique identifier for the device
    * @returns Promise resolving to an array of timeline entries
+   * @throws DatabaseError if a database operation fails
    */
   async getUserTimeline(deviceId: string): Promise<TimelineEntry[]> {
     if (!deviceId) {
@@ -126,7 +157,11 @@ export const timelineService = {
           return [];
         }
         logger.error('Error retrieving device for timeline', { error: deviceError, deviceId });
-        throw deviceError;
+        throw new DatabaseError(deviceError.message, {
+          code: deviceError.code,
+          details: deviceError.details,
+          hint: deviceError.hint
+        });
       }
 
       if (!deviceData?.id) {
@@ -142,7 +177,11 @@ export const timelineService = {
 
       if (error) {
         logger.error('Error retrieving timeline entries', { error, deviceId });
-        throw error;
+        throw new DatabaseError(error.message, {
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        });
       }
 
       logger.info('Timeline entries retrieved successfully', {
@@ -151,14 +190,25 @@ export const timelineService = {
       });
       return (data || []) as TimelineEntry[];
     } catch (error) {
+      // Rethrow our custom errors
+      if (error instanceof DatabaseError) {
+        throw error;
+      }
+      
       if (error instanceof PostgrestError) {
         logger.error('Supabase error retrieving timeline', {
           code: error.code,
           message: error.message,
         });
-        return [];
+        throw new DatabaseError(error.message, {
+          code: error.code,
+          hint: error.hint
+        });
+      } else if (error instanceof Error) {
+        logger.error('Error retrieving timeline', { message: error.message });
+        throw new NetworkError(`Failed to retrieve timeline: ${error.message}`, error);
       } else {
-        logger.error('Error retrieving timeline', { error });
+        logger.error('Unknown error retrieving timeline', { error });
         return [];
       }
     }
@@ -171,6 +221,10 @@ export const timelineService = {
    * @param entryId - ID of the entry to update
    * @param updates - Object containing fields to update
    * @returns Promise resolving to the updated entry
+   * @throws ValidationError if required fields are missing
+   * @throws DeviceNotFoundError if device is not found
+   * @throws EntryNotFoundError if entry is not found
+   * @throws DatabaseError if a database operation fails
    */
   async updateEntry(
     deviceId: string,
@@ -179,12 +233,12 @@ export const timelineService = {
   ): Promise<TimelineEntry> {
     if (!deviceId) {
       logger.warn('Attempted to update entry with empty deviceId');
-      throw new Error('Device ID is required');
+      throw new ValidationError('deviceId');
     }
     
     if (!entryId) {
       logger.warn('Attempted to update entry with empty entryId');
-      throw new Error('Entry ID is required');
+      throw new ValidationError('entryId');
     }
 
     try {
@@ -197,12 +251,19 @@ export const timelineService = {
 
       if (deviceError) {
         logger.error('Error retrieving device for update', { error: deviceError, deviceId });
-        throw deviceError;
+        if (deviceError.code === 'PGRST116') {
+          throw new DeviceNotFoundError(deviceId);
+        }
+        throw new DatabaseError(deviceError.message, {
+          code: deviceError.code,
+          details: deviceError.details,
+          hint: deviceError.hint
+        });
       }
 
       if (!deviceData?.id) {
         logger.error('Device not found for update', { deviceId });
-        throw new Error('Device not found');
+        throw new DeviceNotFoundError(deviceId);
       }
 
       // Then update the entry with the device ID constraint
@@ -219,33 +280,54 @@ export const timelineService = {
 
       if (error) {
         logger.error('Error updating timeline entry', { error, deviceId, entryId });
-        throw error;
+        throw new DatabaseError(error.message, {
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        });
+      }
+      
+      // Check if any rows were affected - if not, the entry wasn't found
+      if (!data) {
+        logger.error('Entry not found for update', { entryId, deviceId });
+        throw new EntryNotFoundError(entryId);
+      }
+      
+      const typedData = data as unknown as any[];
+      if (Array.isArray(typedData) && typedData.length === 0) {
+        logger.error('Entry not found for update', { entryId, deviceId });
+        throw new EntryNotFoundError(entryId);
       }
       
       logger.info('Timeline entry updated successfully', { deviceId, entryId });
-      if (!data) {
-        // This should never happen if there was no error, but handle it just in case
-        return {
-          id: entryId,
-          ...updates,
-          device_id: deviceData.id
-        } as TimelineEntry;
-      }
       // In some versions of Supabase, the data might be an array or single object
-      return Array.isArray(data) ? data[0] as TimelineEntry : data as TimelineEntry;
+      return Array.isArray(typedData) ? typedData[0] as TimelineEntry : data as TimelineEntry;
     } catch (error) {
+      // Rethrow our custom errors
+      if (error instanceof ValidationError || 
+          error instanceof DeviceNotFoundError || 
+          error instanceof EntryNotFoundError ||
+          error instanceof DatabaseError) {
+        throw error;
+      }
+      
       if (error instanceof PostgrestError) {
         logger.error('Supabase error updating timeline entry', {
           code: error.code,
           message: error.message,
           hint: error.hint,
         });
+        throw new DatabaseError(error.message, {
+          code: error.code,
+          hint: error.hint
+        });
       } else if (error instanceof Error) {
         logger.error('Error updating timeline entry', { message: error.message });
+        throw new NetworkError(`Failed to update timeline entry: ${error.message}`, error);
       } else {
         logger.error('Unknown error updating timeline entry', { error });
+        throw new NetworkError('An unexpected error occurred when updating timeline entry');
       }
-      throw error;
     }
   },
 
@@ -255,16 +337,20 @@ export const timelineService = {
    * @param deviceId - Unique identifier for the device
    * @param entryId - ID of the entry to delete
    * @returns Promise that resolves when the entry is deleted
+   * @throws ValidationError if required fields are missing
+   * @throws DeviceNotFoundError if device is not found
+   * @throws EntryNotFoundError if entry is not found
+   * @throws DatabaseError if a database operation fails
    */
   async deleteEntry(deviceId: string, entryId: string): Promise<void> {
     if (!deviceId) {
       logger.warn('Attempted to delete entry with empty deviceId');
-      throw new Error('Device ID is required');
+      throw new ValidationError('deviceId');
     }
     
     if (!entryId) {
       logger.warn('Attempted to delete entry with empty entryId');
-      throw new Error('Entry ID is required');
+      throw new ValidationError('entryId');
     }
 
     try {
@@ -277,16 +363,23 @@ export const timelineService = {
 
       if (deviceError) {
         logger.error('Error retrieving device for deletion', { error: deviceError, deviceId });
-        throw deviceError;
+        if (deviceError.code === 'PGRST116') {
+          throw new DeviceNotFoundError(deviceId);
+        }
+        throw new DatabaseError(deviceError.message, {
+          code: deviceError.code,
+          details: deviceError.details,
+          hint: deviceError.hint
+        });
       }
 
       if (!deviceData?.id) {
         logger.error('Device not found for deletion', { deviceId });
-        throw new Error('Device not found');
+        throw new DeviceNotFoundError(deviceId);
       }
 
       // Then delete entries matching both the entry ID and device ID
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('timeline_entries')
         .delete()
         .eq('id', entryId)
@@ -294,23 +387,52 @@ export const timelineService = {
 
       if (error) {
         logger.error('Error deleting timeline entry', { error, deviceId, entryId });
-        throw error;
+        throw new DatabaseError(error.message, {
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        });
+      }
+      
+      // Check if any rows were affected - if not, the entry wasn't found
+      if (!data) {
+        logger.error('Entry not found for deletion', { entryId, deviceId });
+        throw new EntryNotFoundError(entryId);
+      }
+      
+      const typedData = data as unknown as any[];
+      if (Array.isArray(typedData) && typedData.length === 0) {
+        logger.error('Entry not found for deletion', { entryId, deviceId });
+        throw new EntryNotFoundError(entryId);
       }
       
       logger.info('Timeline entry deleted successfully', { deviceId, entryId });
     } catch (error) {
+      // Rethrow our custom errors
+      if (error instanceof ValidationError || 
+          error instanceof DeviceNotFoundError || 
+          error instanceof EntryNotFoundError ||
+          error instanceof DatabaseError) {
+        throw error;
+      }
+      
       if (error instanceof PostgrestError) {
         logger.error('Supabase error deleting timeline entry', {
           code: error.code,
           message: error.message,
           hint: error.hint,
         });
+        throw new DatabaseError(error.message, {
+          code: error.code,
+          hint: error.hint
+        });
       } else if (error instanceof Error) {
         logger.error('Error deleting timeline entry', { message: error.message });
+        throw new NetworkError(`Failed to delete timeline entry: ${error.message}`, error);
       } else {
         logger.error('Unknown error deleting timeline entry', { error });
+        throw new NetworkError('An unexpected error occurred when deleting timeline entry');
       }
-      throw error;
     }
   },
 };
