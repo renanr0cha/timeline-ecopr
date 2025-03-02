@@ -13,7 +13,11 @@ interface MockDeviceResponse {
 }
 
 interface MockEntryResponse {
-  data: Partial<TimelineEntry>;
+  data: Partial<TimelineEntry> | Partial<TimelineEntry>[];
+  error: null | Error;
+}
+
+interface MockDeleteResponse {
   error: null | Error;
 }
 
@@ -121,5 +125,168 @@ describe('Timeline Service', () => {
     });
 
     // Additional tests would be added for success and error cases...
+  });
+
+  describe('updateEntry', () => {
+    it('should throw error if device ID is not provided', async () => {
+      await expect(
+        timelineService.updateEntry('', 'entry-id', { notes: 'Updated notes' })
+      ).rejects.toThrow('Device ID is required');
+    });
+
+    it('should throw error if entry ID is not provided', async () => {
+      await expect(
+        timelineService.updateEntry('device-id', '', { notes: 'Updated notes' })
+      ).rejects.toThrow('Entry ID is required');
+    });
+
+    it('should update an entry successfully', async () => {
+      // Mock successful device fetch
+      const mockDeviceResponse: MockDeviceResponse = {
+        data: { id: 'device-uuid' },
+        error: null,
+      };
+
+      // Mock successful entry update
+      const mockEntryResponse: MockEntryResponse = {
+        data: [{ 
+          id: 'entry-uuid', 
+          device_id: 'device-uuid',
+          entry_type: 'aor', 
+          entry_date: '2023-06-01',
+          notes: 'Updated notes'
+        }] as TimelineEntry[],
+        error: null,
+      };
+
+      // Setup mocks with proper type annotations
+      const mockFrom = jest.fn().mockReturnThis();
+      const mockSelect = jest.fn().mockReturnThis();
+      const mockUpdate = jest.fn().mockReturnThis();
+      const mockEq = jest.fn().mockReturnThis();
+      const mockSingle = jest.fn<() => Promise<MockDeviceResponse>>().mockResolvedValue(mockDeviceResponse);
+      const mockSelectAfterUpdate = jest.fn<() => Promise<MockEntryResponse>>().mockResolvedValue(mockEntryResponse);
+
+      // Mock supabase chain for device query
+      (supabase.from as jest.Mock)
+        .mockImplementationOnce(() => ({
+          select: mockSelect.mockReturnValue({
+            eq: mockEq.mockReturnValue({
+              single: mockSingle,
+            }),
+          }),
+        }))
+        // Mock supabase chain for entry update
+        .mockImplementationOnce(() => ({
+          update: mockUpdate.mockReturnValue({
+            eq: mockEq.mockReturnValue({
+              eq: mockEq.mockReturnValue({
+                select: mockSelectAfterUpdate,
+              }),
+            }),
+          }),
+        }));
+
+      // Call the service method
+      const result = await timelineService.updateEntry(
+        'test-device-id',
+        'entry-uuid',
+        { notes: 'Updated notes' }
+      );
+
+      // Verify device query was called correctly
+      expect(supabase.from).toHaveBeenCalledWith('devices');
+      expect(mockSelect).toHaveBeenCalledWith('id');
+      expect(mockEq).toHaveBeenCalledWith('device_identifier', 'test-device-id');
+      expect(mockSingle).toHaveBeenCalled();
+
+      // Verify entry update was called correctly
+      expect(supabase.from).toHaveBeenCalledWith('timeline_entries');
+      expect(mockUpdate).toHaveBeenCalledWith({
+        notes: 'Updated notes',
+        updated_at: expect.any(String),
+      });
+      // First eq should be for entry ID
+      expect(mockEq).toHaveBeenCalledWith('id', 'entry-uuid');
+      // Second eq should be for device ID
+      expect(mockEq).toHaveBeenCalledWith('device_id', 'device-uuid');
+
+      // Verify the result
+      expect(result).toEqual((mockEntryResponse.data as TimelineEntry[])[0]);
+    });
+  });
+
+  describe('deleteEntry', () => {
+    it('should throw error if device ID is not provided', async () => {
+      await expect(
+        timelineService.deleteEntry('', 'entry-id')
+      ).rejects.toThrow('Device ID is required');
+    });
+
+    it('should throw error if entry ID is not provided', async () => {
+      await expect(
+        timelineService.deleteEntry('device-id', '')
+      ).rejects.toThrow('Entry ID is required');
+    });
+
+    it('should delete an entry successfully', async () => {
+      // Mock successful device fetch
+      const mockDeviceResponse: MockDeviceResponse = {
+        data: { id: 'device-uuid' },
+        error: null,
+      };
+
+      // Mock successful entry deletion
+      const mockDeleteResponse: MockDeleteResponse = {
+        error: null,
+      };
+
+      // Setup mocks with proper type annotations
+      const mockFrom = jest.fn().mockReturnThis();
+      const mockSelect = jest.fn().mockReturnThis();
+      const mockDelete = jest.fn().mockReturnThis();
+      const mockEq = jest.fn().mockReturnThis();
+      const mockSingle = jest.fn<() => Promise<MockDeviceResponse>>().mockResolvedValue(mockDeviceResponse);
+      const mockDeleteFinal = jest.fn<() => Promise<MockDeleteResponse>>().mockResolvedValue(mockDeleteResponse);
+
+      // Mock supabase chain for device query
+      (supabase.from as jest.Mock)
+        .mockImplementationOnce(() => ({
+          select: mockSelect.mockReturnValue({
+            eq: mockEq.mockReturnValue({
+              single: mockSingle,
+            }),
+          }),
+        }))
+        // Mock supabase chain for entry deletion
+        .mockImplementationOnce(() => ({
+          delete: mockDelete.mockReturnValue({
+            eq: mockEq.mockReturnValue({
+              eq: mockEq.mockReturnValue(mockDeleteFinal),
+            }),
+          }),
+        }));
+
+      // Call the service method
+      await timelineService.deleteEntry(
+        'test-device-id',
+        'entry-uuid'
+      );
+
+      // Verify device query was called correctly
+      expect(supabase.from).toHaveBeenCalledWith('devices');
+      expect(mockSelect).toHaveBeenCalledWith('id');
+      expect(mockEq).toHaveBeenCalledWith('device_identifier', 'test-device-id');
+      expect(mockSingle).toHaveBeenCalled();
+
+      // Verify entry deletion was called correctly
+      expect(supabase.from).toHaveBeenCalledWith('timeline_entries');
+      expect(mockDelete).toHaveBeenCalled();
+      // First eq should be for entry ID
+      expect(mockEq).toHaveBeenCalledWith('id', 'entry-uuid');
+      // Second eq should be for device ID
+      expect(mockEq).toHaveBeenCalledWith('device_id', 'device-uuid');
+      expect(mockDeleteFinal).toHaveBeenCalled();
+    });
   });
 }); 
