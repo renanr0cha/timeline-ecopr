@@ -3,12 +3,27 @@ import { PostgrestError } from '@supabase/supabase-js';
 import { logger } from '../lib/logger';
 import { supabase } from '../lib/supabase';
 import { CommunityStatistic } from '../types';
+import { loadMockStatisticsData } from '../utils/mock-data';
 
 /**
  * Service for retrieving and processing community statistics
  * Handles querying Supabase for aggregated timeline data
  */
 export const statisticsService = {
+  /**
+   * Flag to toggle use of mock data for statistics
+   */
+  useMockData: false,
+
+  /**
+   * Toggle mock data on/off
+   */
+  toggleMockData() {
+    this.useMockData = !this.useMockData;
+    logger.info('Mock data for statistics', { enabled: this.useMockData });
+    return this.useMockData;
+  },
+
   /**
    * Retrieves community statistics with optional filtering
    *
@@ -21,6 +36,14 @@ export const statisticsService = {
       if (transitionType && !['aor-p2', 'p2-ecopr', 'ecopr-pr_card'].includes(transitionType)) {
         logger.warn('Invalid transition type provided', { transitionType });
         throw new Error('Invalid transition type');
+      }
+
+      // Use mock data if enabled
+      if (this.useMockData) {
+        logger.info('Using mock statistics data', { transitionType });
+        const mockData = loadMockStatisticsData(transitionType);
+        logger.info('Mock statistics loaded successfully', { count: mockData.length });
+        return mockData;
       }
 
       // Call the stored procedure

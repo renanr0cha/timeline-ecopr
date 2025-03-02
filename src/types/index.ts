@@ -34,6 +34,16 @@ export interface CommunityStatistic {
   max_days: number;
   count: number;
   month_year?: string;
+  waiting_count?: number; // Count of people waiting (e.g., with P2 waiting for ecoPR)
+  week_breakdown?: WeeklyBreakdown[]; // Weekly breakdown data
+}
+
+/**
+ * Weekly breakdown of statistics
+ */
+export interface WeeklyBreakdown {
+  week_range: string;
+  count: number;
 }
 
 /**
@@ -51,7 +61,7 @@ export interface DeviceData {
  */
 export type RootStackParamList = {
   Home: { deviceId: string };
-  AddEntry: { deviceId: string; entryType?: EntryType; entryId?: string };
+  AddEntry: { deviceId: string; entryType?: EntryType; entryId?: string; onComplete?: () => void; existingEntries?: TimelineEntry[] };
   Statistics: { deviceId: string };
   MockDataDemo: undefined;
 };

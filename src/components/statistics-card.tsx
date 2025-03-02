@@ -5,13 +5,14 @@ import { CommunityStatistic } from '../types';
 
 interface StatisticsCardProps {
   statistic: CommunityStatistic;
+  hideMonth?: boolean;
 }
 
 /**
  * Statistics card component to display community statistics with animations
  * Provides a visually appealing presentation of processing time data
  */
-export const StatisticsCard = ({ statistic }: StatisticsCardProps) => {
+export const StatisticsCard = ({ statistic, hideMonth = false }: StatisticsCardProps) => {
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const progressAnim = useRef(new Animated.Value(0)).current;
@@ -68,11 +69,14 @@ export const StatisticsCard = ({ statistic }: StatisticsCardProps) => {
     outputRange: ['0%', `${Math.min(100, (statistic.avg_days / 365) * 100)}%`],
   });
 
+  // Create separate styles for standalone vs grouped cards
+  const cardClasses = hideMonth ? 'p-4' : 'rounded-xl bg-white p-4 shadow-sm';
+
   return (
     <Animated.View
-      className="mb-4 rounded-xl bg-white p-4 shadow-sm"
+      className={cardClasses}
       style={[
-        styles.cardShadow,
+        hideMonth ? null : styles.cardShadow,
         {
           opacity: fadeAnim,
           transform: [
@@ -91,7 +95,7 @@ export const StatisticsCard = ({ statistic }: StatisticsCardProps) => {
             {formatTransitionType(statistic.transition_type)}
           </Text>
         </View>
-        {statistic.month_year && (
+        {statistic.month_year && !hideMonth && (
           <Text className="text-xs font-medium text-gray-500">{statistic.month_year}</Text>
         )}
       </View>

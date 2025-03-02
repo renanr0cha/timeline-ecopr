@@ -19,7 +19,7 @@ import { MaskedTextInput } from 'react-native-mask-text';
 import { ScreenContent } from '../components/screen-content';
 import { logger } from '../lib/logger';
 import { timelineService } from '../services/timeline-service';
-import { EntryType, RootStackParamList } from '../types';
+import { EntryType, RootStackParamList, TimelineEntry } from '../types';
 
 type AddEntryScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'AddEntry'>;
 
@@ -29,6 +29,8 @@ interface AddEntryScreenProps {
       deviceId: string;
       entryType?: EntryType;
       entryId?: string;
+      onComplete?: () => void;
+      existingEntries?: TimelineEntry[];
     };
   };
 }
@@ -74,11 +76,16 @@ const ENTRY_TYPE_OPTIONS: {
 ];
 
 /**
+ * Get the milestone sequence for determining next steps
+ */
+const MILESTONE_SEQUENCE: EntryType[] = ['aor', 'p2', 'ecopr', 'pr_card'];
+
+/**
  * Screen for adding or editing a timeline entry
  * Enhanced with animations and improved UI
  */
 export default function AddEntryScreen({ route }: AddEntryScreenProps) {
-  const { deviceId, entryType: initialEntryType, entryId } = route.params;
+  const { deviceId, entryType: initialEntryType, entryId, onComplete, existingEntries = [] } = route.params;
   const [entryType, setEntryType] = useState<EntryType>(initialEntryType || 'aor');
   const [date, setDate] = useState(new Date());
   const [dateText, setDateText] = useState('');
@@ -86,11 +93,36 @@ export default function AddEntryScreen({ route }: AddEntryScreenProps) {
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [showEntryTypeSelection, setShowEntryTypeSelection] = useState(false);
   const navigation = useNavigation<AddEntryScreenNavigationProp>();
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
+  
+  // Get the current progress to determine the next step
+  const getCurrentStepIndex = (): number => {
+    let completedIndex = -1;
+    
+    MILESTONE_SEQUENCE.forEach((milestone, index) => {
+      if (existingEntries.some((entry) => entry.entry_type === milestone)) {
+        completedIndex = index;
+      }
+    });
+    
+    return completedIndex;
+  };
+  
+  // Determine the next milestone that needs to be added
+  const getNextMilestoneType = (): EntryType => {
+    const currentIndex = getCurrentStepIndex();
+    const nextIndex = currentIndex + 1;
+    
+    // If we have next milestone, return it, otherwise default to first
+    return nextIndex < MILESTONE_SEQUENCE.length 
+      ? MILESTONE_SEQUENCE[nextIndex] 
+      : MILESTONE_SEQUENCE[0];
+  };
 
   useEffect(() => {
     // Run entry animations
@@ -108,6 +140,13 @@ export default function AddEntryScreen({ route }: AddEntryScreenProps) {
         easing: Easing.out(Easing.cubic),
       }),
     ]).start();
+
+    // If no entry type is specified, but we have existing entries,
+    // automatically detect and use the next step
+    if (!initialEntryType && existingEntries.length > 0) {
+      const nextType = getNextMilestoneType();
+      setEntryType(nextType);
+    }
 
     // Load entry data if editing
     if (entryId) {
@@ -216,6 +255,11 @@ export default function AddEntryScreen({ route }: AddEntryScreenProps) {
         await timelineService.addEntry(deviceId, entryType, dateText, notes);
       }
 
+      // Call the onComplete callback if provided
+      if (onComplete) {
+        onComplete();
+      }
+
       navigation.goBack();
     } catch (error) {
       logger.error('Error submitting entry', { error });
@@ -225,75 +269,147 @@ export default function AddEntryScreen({ route }: AddEntryScreenProps) {
     }
   };
 
+  /**
+   * Get color for specific entry type
+   */
+  const getEntryTypeColor = (type: EntryType): string => {
+    const option = ENTRY_TYPE_OPTIONS.find(opt => opt.value === type);
+    return option?.color || 'bg-gray-500';
+  };
+
   return (
     <ScreenContent scrollable>
       <Animated.View
         className="px-4 pb-6 pt-2"
         style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
         <Text className="mb-1 text-2xl font-bold text-gray-800">
-          {isEditing ? 'Edit Entry' : 'Add Entry'}
+          {isEditing ? 'Edit Milestone' : 'Record Milestone'}
         </Text>
         <Text className="mb-6 text-gray-500">
           {isEditing
-            ? 'Update your PR journey milestone'
-            : 'Track a new milestone in your PR journey'}
+            ? 'Update the details of your PR journey milestone'
+            : 'Document your progress in the Canadian PR process'}
         </Text>
 
-        {/* Entry Type Selection */}
-        <View className="mb-6">
-          <Text className="mb-3 font-medium text-gray-700">Entry Type</Text>
-          <View className="flex-row flex-wrap">
-            {ENTRY_TYPE_OPTIONS.map((option) => (
-              <TouchableOpacity
-                key={option.value}
-                className={`mb-2 mr-2 flex-row items-center rounded-xl border px-4 py-3 ${
-                  entryType === option.value
-                    ? `${option.color} border-transparent`
-                    : 'border-gray-200 bg-white'
-                }`}
-                onPress={() => setEntryType(option.value)}>
-                <Ionicons
-                  name={option.icon as any}
-                  size={18}
-                  color={entryType === option.value ? 'white' : '#64748b'}
-                />
-                <Text
-                  className={`ml-2 font-medium ${
-                    entryType === option.value ? 'text-white' : 'text-gray-700'
-                  }`}>
-                  {option.label}
-                </Text>
+        {/* Entry Type Display with Edit Option */}
+        {!showEntryTypeSelection ? (
+          <View className="mb-6">
+            <View className="flex-row items-center justify-between">
+              <Text className="font-medium text-gray-700">Milestone Type</Text>
+              <TouchableOpacity 
+                onPress={() => setShowEntryTypeSelection(true)}
+                className="flex-row items-center"
+              >
+                <Ionicons name="pencil-outline" size={18} color="#3b82f6" />
+                <Text className="ml-1 text-blue-500">Change</Text>
               </TouchableOpacity>
-            ))}
+            </View>
+            
+            <View className="mt-3 flex-row items-center rounded-xl border border-gray-200 bg-white p-4">
+              <View className={`h-10 w-10 items-center justify-center rounded-full ${getEntryTypeColor(entryType)}`}>
+                <Ionicons
+                  name={ENTRY_TYPE_OPTIONS.find(opt => opt.value === entryType)?.icon as any}
+                  size={20}
+                  color="white"
+                />
+              </View>
+              <View className="ml-3 flex-1">
+                <Text className="text-lg font-medium text-gray-800">
+                  {ENTRY_TYPE_OPTIONS.find(opt => opt.value === entryType)?.label}
+                </Text>
+                <Text className="text-sm text-gray-500">
+                  {ENTRY_TYPE_OPTIONS.find(opt => opt.value === entryType)?.description}
+                </Text>
+              </View>
+            </View>
           </View>
-          <Text className="mt-2 text-xs text-gray-500">
-            {ENTRY_TYPE_OPTIONS.find((opt) => opt.value === entryType)?.description}
-          </Text>
-        </View>
+        ) : (
+          /* Entry Type Selection */
+          <View className="mb-6">
+            <View className="flex-row items-center justify-between">
+              <Text className="font-medium text-gray-700">Select Milestone Type</Text>
+              <TouchableOpacity 
+                onPress={() => setShowEntryTypeSelection(false)}
+                className="flex-row items-center"
+              >
+                <Ionicons name="close-outline" size={18} color="#64748b" />
+                <Text className="ml-1 text-gray-500">Cancel</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View className="mt-3 space-y-2">
+              {ENTRY_TYPE_OPTIONS.map((option) => (
+                <TouchableOpacity
+                  key={option.value}
+                  className={`flex-row items-center rounded-xl border p-3 ${
+                    entryType === option.value
+                      ? `${option.color} border-transparent`
+                      : 'border-gray-200 bg-white'
+                  }`}
+                  onPress={() => {
+                    setEntryType(option.value);
+                    setShowEntryTypeSelection(false);
+                  }}>
+                  <View className={`h-8 w-8 items-center justify-center rounded-full ${
+                    entryType === option.value ? 'bg-white bg-opacity-20' : option.color
+                  }`}>
+                    <Ionicons
+                      name={option.icon as any}
+                      size={18}
+                      color={entryType === option.value ? 'white' : 'white'}
+                    />
+                  </View>
+                  <View className="ml-3 flex-1">
+                    <Text
+                      className={`font-medium ${
+                        entryType === option.value ? 'text-white' : 'text-gray-700'
+                      }`}>
+                      {option.label}
+                    </Text>
+                    <Text
+                      className={`text-xs ${
+                        entryType === option.value ? 'text-white text-opacity-80' : 'text-gray-500'
+                      }`}>
+                      {option.description}
+                    </Text>
+                  </View>
+                  {entryType === option.value && (
+                    <Ionicons name="checkmark-circle" size={24} color="white" />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
 
-        {/* Date Input */}
+        {/* Date Input - Improved UI with increased height */}
         <View className="mb-6">
           <Text className="mb-3 font-medium text-gray-700">Date</Text>
-          <View className="flex-row">
-            <View className="flex-1">
-              <MaskedTextInput
-                mask="9999-99-99"
-                placeholder="YYYY-MM-DD"
-                value={dateText}
-                onChangeText={handleDateTextChange}
-                keyboardType="number-pad"
-                className="rounded-l-lg border border-gray-200 bg-white p-3 text-gray-700"
-              />
+          <View className="overflow-hidden rounded-lg border border-gray-300 shadow-sm">
+            <View className="flex-row">
+              <View className="flex-1 bg-white">
+                <MaskedTextInput
+                  mask="9999-99-99"
+                  placeholder="YYYY-MM-DD"
+                  value={dateText}
+                  onChangeText={handleDateTextChange}
+                  keyboardType="number-pad"
+                  className="p-6 text-lg font-medium text-gray-700"
+                  style={{ height: 60 }}
+                />
+              </View>
+              <TouchableOpacity
+                className="items-center justify-center bg-blue-500 px-6"
+                onPress={() => setShowDatePicker(true)}>
+                <Ionicons name="calendar-outline" size={26} color="white" />
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              className="items-center justify-center rounded-r-lg bg-blue-500 px-4"
-              onPress={() => setShowDatePicker(true)}>
-              <Ionicons name="calendar-outline" size={24} color="white" />
-            </TouchableOpacity>
+            <View className="border-t border-gray-200 bg-gray-50 px-4 py-3">
+              <Text className="text-xs text-gray-500">
+                When did you receive this notification or document?
+              </Text>
+            </View>
           </View>
-          <Text className="mt-2 text-xs text-gray-500">
-            Enter the date when this milestone occurred
-          </Text>
         </View>
 
         {/* Date Picker */}
@@ -309,16 +425,23 @@ export default function AddEntryScreen({ route }: AddEntryScreenProps) {
 
         {/* Notes Input */}
         <View className="mb-8">
-          <Text className="mb-3 font-medium text-gray-700">Notes (Optional)</Text>
-          <TextInput
-            value={notes}
-            onChangeText={setNotes}
-            placeholder="Add any additional details here..."
-            multiline
-            numberOfLines={4}
-            className="h-32 rounded-lg border border-gray-200 bg-white p-3 text-gray-700"
-            textAlignVertical="top"
-          />
+          <Text className="mb-3 font-medium text-gray-700">Additional Notes</Text>
+          <View className="overflow-hidden rounded-lg border border-gray-300 shadow-sm">
+            <TextInput
+              value={notes}
+              onChangeText={setNotes}
+              placeholder="Add details like reference numbers or specific information for your records..."
+              multiline
+              numberOfLines={4}
+              className="h-32 bg-white p-4 text-gray-700"
+              textAlignVertical="top"
+            />
+            <View className="border-t border-gray-200 bg-gray-50 px-3 py-2">
+              <Text className="text-xs text-gray-500">
+                Add details like reference numbers or specific information for your records
+              </Text>
+            </View>
+          </View>
         </View>
 
         {/* Submit Button */}
@@ -331,7 +454,7 @@ export default function AddEntryScreen({ route }: AddEntryScreenProps) {
               <ActivityIndicator color="white" />
             ) : (
               <Text className="font-bold text-white">
-                {isEditing ? 'Update Entry' : 'Save Entry'}
+                {isEditing ? 'Save Changes' : 'Save Milestone'}
               </Text>
             )}
           </TouchableOpacity>

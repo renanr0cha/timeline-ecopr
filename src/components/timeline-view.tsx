@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 
-import { TimelineEntry } from '../types';
+import { EntryType, TimelineEntry } from '../types';
 
 interface TimelineViewProps {
   entries: TimelineEntry[];
@@ -13,8 +13,18 @@ interface TimelineViewProps {
  * Includes animation effects for a modern and visually appealing UI
  */
 export const TimelineView = ({ entries, onEntryPress }: TimelineViewProps) => {
+  // Define the fixed order of milestones in the journey - ordered from top to bottom
+  const milestoneOrder: EntryType[] = ['aor', 'p2', 'ecopr', 'pr_card'];
+  
+  // Sort entries by the fixed milestone order, not by date
+  const orderedEntries = [...entries].sort((a, b) => {
+    const orderA = milestoneOrder.indexOf(a.entry_type);
+    const orderB = milestoneOrder.indexOf(b.entry_type);
+    return orderA - orderB;
+  });
+  
   // Create animated values for each entry (for fade-in and slide effects)
-  const animatedValues = entries.map(() => new Animated.Value(0));
+  const animatedValues = orderedEntries.map(() => new Animated.Value(0));
 
   useEffect(() => {
     // Animate entries sequentially with a staggered effect
@@ -79,8 +89,8 @@ export const TimelineView = ({ entries, onEntryPress }: TimelineViewProps) => {
   };
 
   return (
-    <View className="px-1 py-2">
-      {entries.map((entry, index) => {
+    <View className="py-2">
+      {orderedEntries.map((entry, index) => {
         // Calculate opacity and translation based on the animated value
         const opacity = animatedValues[index];
         const translateY = animatedValues[index].interpolate({
@@ -92,28 +102,38 @@ export const TimelineView = ({ entries, onEntryPress }: TimelineViewProps) => {
           <Animated.View
             key={entry.id || index.toString()}
             style={[{ opacity, transform: [{ translateY }] }]}
-            className="flex-row">
-            {/* Timeline line and dot */}
-            <View className="mr-4 w-8 items-center">
-              <View className={`h-4 w-4 rounded-full ${getEntryTypeColor(entry.entry_type)}`} />
-              {index !== entries.length - 1 && <View className="my-1 w-1 flex-1 bg-gray-300" />}
-            </View>
-
-            {/* Content */}
-            <View
-              className="mb-4 flex-1 rounded-xl border border-gray-100 bg-white p-4 shadow-sm"
-              style={styles.cardShadow}>
-              <View className="mb-2 flex-row items-center justify-between">
-                <View className={`rounded-full px-3 py-1 ${getEntryTypeColor(entry.entry_type)}`}>
-                  <Text className="text-xs font-medium text-white">
-                    {getEntryTypeName(entry.entry_type)}
-                  </Text>
-                </View>
-                <Text className="text-sm text-gray-500">{formatDate(entry.entry_date)}</Text>
+            className="relative">
+            {/* Timeline row */}
+            <View className="mb-4 flex-row">
+              {/* Timeline line and dot */}
+              <View className="z-10 mr-4 items-center" style={{ width: 24 }}>
+                <View className={`h-4 w-4 rounded-full ${getEntryTypeColor(entry.entry_type)}`} />
               </View>
 
-              {entry.notes && <Text className="text-gray-700">{entry.notes}</Text>}
+              {/* Content */}
+              <View
+                className="mb-4 flex-1 rounded-xl border border-gray-100 bg-white p-4 shadow-sm"
+                style={styles.cardShadow}>
+                <View className="mb-2 flex-row items-center justify-between">
+                  <View className={`rounded-full px-3 py-1 ${getEntryTypeColor(entry.entry_type)}`}>
+                    <Text className="text-xs font-medium text-white">
+                      {getEntryTypeName(entry.entry_type)}
+                    </Text>
+                  </View>
+                  <Text className="text-sm text-gray-500">{formatDate(entry.entry_date)}</Text>
+                </View>
+
+                {entry.notes && <Text className="text-gray-700">{entry.notes}</Text>}
+              </View>
             </View>
+            
+            {/* Connecting line to next milestone (except for the last one) */}
+            {index !== orderedEntries.length - 1 && (
+              <View 
+                className="absolute left-3 top-4 -z-0 w-0.5 bg-gray-300" 
+                style={{ height: 60 }} 
+              />
+            )}
           </Animated.View>
         );
       })}

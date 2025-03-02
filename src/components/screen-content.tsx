@@ -31,15 +31,7 @@ export function ScreenContent({
 
   return (
     <SafeAreaView className="flex-1 bg-slate-50">
-      {scrollable ? (
-        <ScrollView
-          className="flex-1"
-          contentContainerStyle={padding ? { paddingHorizontal: 16 } : undefined}>
-          {renderContent()}
-        </ScrollView>
-      ) : (
-        renderContent()
-      )}
+      {scrollable ? <ScrollView className="flex-1">{renderContent()}</ScrollView> : renderContent()}
     </SafeAreaView>
   );
 }
