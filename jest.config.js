@@ -12,6 +12,7 @@ module.exports = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     // Mock problematic modules
-    'react-native/Libraries/Animated/NativeAnimatedHelper': '<rootDir>/node_modules/react-native/Libraries/Animated/AnimatedImplementation.js',
+    'react-native/Libraries/Animated/NativeAnimatedHelper':
+      '<rootDir>/node_modules/react-native/Libraries/Animated/AnimatedImplementation.js',
   },
-}; 
+};
