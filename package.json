@@ -2,26 +2,31 @@
   "name": "timeline-ecopr",
   "version": "1.0.0",
   "scripts": {
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "start": "expo start",
     "prebuild": "expo prebuild",
     "lint": "eslint \"**/*.{js,jsx,ts,tsx}\" && prettier -c \"**/*.{js,jsx,ts,tsx,json}\"",
     "format": "eslint \"**/*.{js,jsx,ts,tsx}\" --fix && prettier \"**/*.{js,jsx,ts,tsx,json}\" --write",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "check-env": "node scripts/check-env.js",
+    "prestart": "npm run check-env"
   },
   "dependencies": {
+    "@expo/vector-icons": "^14.0.4",
     "@react-native-async-storage/async-storage": "^1.23.1",
     "@react-native-community/datetimepicker": "^8.2.0",
     "@react-navigation/native": "^7.0.14",
     "@react-navigation/native-stack": "^7.2.0",
     "@supabase/supabase-js": "^2.49.1",
     "@types/react-native-vector-icons": "^6.4.18",
+    "dotenv": "^16.4.5",
     "expo": "^52.0.37",
     "expo-application": "^6.0.2",
+    "expo-dev-client": "~5.0.12",
     "expo-secure-store": "^14.0.1",
     "expo-status-bar": "~2.0.1",
-    "nativewind": "latest",
+    "nativewind": "^4.1.23",
     "react": "18.3.1",
     "react-native": "0.76.7",
     "react-native-chart-kit": "^6.12.0",
@@ -37,7 +42,7 @@
   "devDependencies": {
     "@babel/core": "^7.20.0",
     "@jest/globals": "^29.7.0",
-    "@testing-library/jest-native": "^5.4.3",
+    "@testing-library/react-native": "^12.4.0",
     "@types/jest": "^29.5.14",
     "@types/react": "~18.3.12",
     "@typescript-eslint/eslint-plugin": "^7.7.0",
@@ -46,13 +51,13 @@
     "eslint-config-universe": "^12.0.1",
     "prettier": "^3.2.5",
     "prettier-plugin-tailwindcss": "^0.5.11",
-    "tailwindcss": "^3.4.0",
+    "tailwindcss": "^3.4.17",
     "typescript": "~5.3.3"
   },
   "eslintConfig": {
     "extends": "universe/native",
     "root": true
   },
-  "main": "node_modules/expo/AppEntry.js",
+  "main": "index.js",
   "private": true
 }

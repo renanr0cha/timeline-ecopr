@@ -3,6 +3,7 @@
     "name": "timeline-ecopr",
     "slug": "timeline-ecopr",
     "version": "1.0.0",
+    "entryPoint": "./index.js",
 
     "web": {
       "favicon": "./assets/favicon.png"
