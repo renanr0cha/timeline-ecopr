@@ -1,9 +1,10 @@
+import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   Dimensions,
   ScrollView,
-  StyleSheet,
   Text,
   TouchableOpacity,
   View,
@@ -11,6 +12,7 @@ import {
 import { BarChart } from 'react-native-chart-kit';
 
 import { ScreenContent } from '../components/screen-content';
+import { StatisticsCard } from '../components/statistics-card';
 import { logger } from '../lib/logger';
 import { statisticsService } from '../services/statistics-service';
 import { CommunityStatistic } from '../types';
@@ -26,7 +28,7 @@ const TRANSITION_TYPES = [
 ];
 
 /**
- * Screen for displaying community statistics
+ * Screen for displaying community statistics with enhanced visualizations
  */
 export default function StatisticsScreen() {
   const [statistics, setStatistics] = useState<CommunityStatistic[]>([]);
@@ -35,6 +37,7 @@ export default function StatisticsScreen() {
     undefined
   );
   const screenWidth = Dimensions.get('window').width;
+  const fadeAnim = useState(new Animated.Value(0))[0];
 
   /**
    * Load community statistics from the service
@@ -42,8 +45,17 @@ export default function StatisticsScreen() {
   const loadStatistics = async () => {
     try {
       setLoading(true);
+      fadeAnim.setValue(0);
+
       const data = await statisticsService.getCommunityStats(selectedTransitionType);
       setStatistics(data);
+
+      // Fade in animation
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }).start();
     } catch (error) {
       logger.error('Error loading statistics', { error });
     } finally {
@@ -81,240 +93,135 @@ export default function StatisticsScreen() {
       datasets: [
         {
           data: recentStats.map((stat) => stat.avg_days),
+          color: (opacity = 1) => {
+            // Use different colors based on transition type when filtered
+            if (selectedTransitionType === 'aor-p2') return `rgba(59, 130, 246, ${opacity})`;
+            if (selectedTransitionType === 'p2-ecopr') return `rgba(168, 85, 247, ${opacity})`;
+            if (selectedTransitionType === 'ecopr-pr_card') return `rgba(34, 197, 94, ${opacity})`;
+            return `rgba(2, 132, 199, ${opacity})`;
+          },
         },
       ],
     };
   };
 
   /**
-   * Renders the filter button row
+   * Get chart background gradient based on selected transition type
    */
-  const renderFilterButtons = () => (
-    <View style={styles.filterContainer}>
-      {TRANSITION_TYPES.map((type) => (
-        <TouchableOpacity
-          key={type.label}
-          style={[
-            styles.filterButton,
-            selectedTransitionType === type.value ? styles.selectedFilter : null,
-          ]}
-          onPress={() => setSelectedTransitionType(type.value)}>
-          <Text
-            style={[
-              styles.filterButtonText,
-              selectedTransitionType === type.value ? styles.selectedFilterText : null,
-            ]}>
-            {type.label}
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
-
-  /**
-   * Renders the statistics cards
-   */
-  const renderStatisticsCards = () => (
-    <View style={styles.cardsContainer}>
-      {statistics.length > 0 ? (
-        statistics.map((stat, index) => (
-          <View key={index} style={styles.card}>
-            <Text style={styles.cardTitle}>
-              {stat.transition_type} {stat.month_year ? `(${stat.month_year})` : ''}
-            </Text>
-            <View style={styles.cardRow}>
-              <View style={styles.cardItem}>
-                <Text style={styles.cardItemLabel}>Avg Days</Text>
-                <Text style={styles.cardItemValue}>{stat.avg_days.toFixed(1)}</Text>
-              </View>
-              <View style={styles.cardItem}>
-                <Text style={styles.cardItemLabel}>Min Days</Text>
-                <Text style={styles.cardItemValue}>{stat.min_days}</Text>
-              </View>
-              <View style={styles.cardItem}>
-                <Text style={styles.cardItemLabel}>Max Days</Text>
-                <Text style={styles.cardItemValue}>{stat.max_days}</Text>
-              </View>
-              <View style={styles.cardItem}>
-                <Text style={styles.cardItemLabel}>Count</Text>
-                <Text style={styles.cardItemValue}>{stat.count}</Text>
-              </View>
-            </View>
-          </View>
-        ))
-      ) : (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No statistics available for this selection</Text>
-        </View>
-      )}
-    </View>
-  );
+  const getChartGradient = () => {
+    if (selectedTransitionType === 'aor-p2') {
+      return {
+        backgroundGradientFrom: '#dbeafe',
+        backgroundGradientTo: '#ffffff',
+      };
+    }
+    if (selectedTransitionType === 'p2-ecopr') {
+      return {
+        backgroundGradientFrom: '#f3e8ff',
+        backgroundGradientTo: '#ffffff',
+      };
+    }
+    if (selectedTransitionType === 'ecopr-pr_card') {
+      return {
+        backgroundGradientFrom: '#dcfce7',
+        backgroundGradientTo: '#ffffff',
+      };
+    }
+    return {
+      backgroundGradientFrom: '#e0f2fe',
+      backgroundGradientTo: '#ffffff',
+    };
+  };
 
   return (
-    <ScreenContent>
-      <View style={styles.container}>
-        <Text style={styles.title}>Community Statistics</Text>
-        <Text style={styles.subtitle}>View processing times from the community</Text>
+    <ScreenContent scrollable>
+      <View className="px-4 pb-6 pt-2">
+        <Text className="mb-1 text-2xl font-bold text-gray-800">Community Statistics</Text>
+        <Text className="mb-6 text-gray-500">View processing times from the community</Text>
 
-        {renderFilterButtons()}
+        {/* Filter buttons */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-6">
+          <View className="flex-row">
+            {TRANSITION_TYPES.map((type) => (
+              <TouchableOpacity
+                key={type.label}
+                className={`mr-2 rounded-full px-4 py-2 ${
+                  selectedTransitionType === type.value ? 'bg-blue-500' : 'bg-gray-100'
+                }`}
+                onPress={() => setSelectedTransitionType(type.value)}>
+                <Text
+                  className={
+                    selectedTransitionType === type.value
+                      ? 'font-medium text-white'
+                      : 'text-gray-600'
+                  }>
+                  {type.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </ScrollView>
 
         {loading ? (
-          <ActivityIndicator size="large" color="#0284c7" style={styles.loader} />
+          <View className="items-center justify-center py-12">
+            <ActivityIndicator size="large" color="#0284c7" />
+            <Text className="mt-4 text-gray-500">Loading statistics...</Text>
+          </View>
         ) : (
-          <ScrollView contentContainerStyle={styles.scrollContent}>
-            <View style={styles.chartContainer}>
-              <Text style={styles.chartTitle}>Average Processing Times (Days)</Text>
-              <BarChart
-                data={getChartData()}
-                width={screenWidth - 40}
-                height={220}
-                yAxisLabel=""
-                yAxisSuffix=" days"
-                chartConfig={{
-                  backgroundColor: '#ffffff',
-                  backgroundGradientFrom: '#ffffff',
-                  backgroundGradientTo: '#ffffff',
-                  decimalPlaces: 0,
-                  color: (opacity = 1) => `rgba(2, 132, 199, ${opacity})`,
-                  labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-                  style: {
-                    borderRadius: 16,
-                  },
-                }}
-                style={styles.chart}
-                verticalLabelRotation={30}
-              />
-            </View>
+          <Animated.View style={{ opacity: fadeAnim }}>
+            {statistics.length > 0 ? (
+              <>
+                <View className="mb-6 rounded-xl bg-white p-4 shadow-sm">
+                  <Text className="mb-4 text-lg font-bold text-gray-800">
+                    Processing Times Trend
+                  </Text>
+                  <BarChart
+                    data={getChartData()}
+                    width={screenWidth - 40}
+                    height={220}
+                    yAxisLabel=""
+                    yAxisSuffix=" days"
+                    chartConfig={{
+                      backgroundColor: '#ffffff',
+                      ...getChartGradient(),
+                      decimalPlaces: 0,
+                      color: (opacity = 1) => `rgba(2, 132, 199, ${opacity})`,
+                      labelColor: (opacity = 1) => `rgba(71, 85, 105, ${opacity})`,
+                      style: {
+                        borderRadius: 16,
+                      },
+                      barPercentage: 0.7,
+                      propsForBackgroundLines: {
+                        strokeDasharray: '6, 4',
+                        strokeWidth: 1,
+                        stroke: '#e2e8f0',
+                      },
+                    }}
+                    style={{
+                      marginVertical: 8,
+                      borderRadius: 16,
+                    }}
+                    verticalLabelRotation={30}
+                    showValuesOnTopOfBars
+                  />
+                </View>
 
-            {renderStatisticsCards()}
-          </ScrollView>
+                {/* Statistics cards */}
+                {statistics.map((stat, index) => (
+                  <StatisticsCard key={index} statistic={stat} />
+                ))}
+              </>
+            ) : (
+              <View className="items-center justify-center rounded-xl bg-white py-12">
+                <Ionicons name="bar-chart-outline" size={64} color="#94a3b8" />
+                <Text className="mt-4 text-center text-gray-500">
+                  No statistics available for this selection
+                </Text>
+              </View>
+            )}
+          </Animated.View>
         )}
       </View>
     </ScreenContent>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 8,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#0f172a',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#64748b',
-    marginBottom: 20,
-  },
-  filterContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 16,
-  },
-  filterButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    marginRight: 8,
-    marginBottom: 8,
-    borderRadius: 20,
-    backgroundColor: '#f1f5f9',
-  },
-  selectedFilter: {
-    backgroundColor: '#0284c7',
-  },
-  filterButtonText: {
-    color: '#64748b',
-    fontWeight: '500',
-  },
-  selectedFilterText: {
-    color: '#ffffff',
-  },
-  loader: {
-    marginTop: 40,
-  },
-  scrollContent: {
-    paddingBottom: 20,
-  },
-  chartContainer: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  chartTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 12,
-    color: '#0f172a',
-  },
-  chart: {
-    marginVertical: 8,
-    borderRadius: 16,
-  },
-  cardsContainer: {
-    marginBottom: 16,
-  },
-  card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 12,
-    color: '#0f172a',
-  },
-  cardRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
-  },
-  cardItem: {
-    minWidth: '22%',
-    marginBottom: 8,
-  },
-  cardItemLabel: {
-    fontSize: 12,
-    color: '#64748b',
-    marginBottom: 4,
-  },
-  cardItemValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#0f172a',
-  },
-  emptyContainer: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#64748b',
-    textAlign: 'center',
-  },
-});
