@@ -15,15 +15,15 @@ export const getOrCreateDeviceId = async (): Promise<string> => {
     if (storedDeviceId) {
       return storedDeviceId;
     }
-    
+
     // Generate a new device ID using the correct API methods
     let deviceId = '';
-    
+
     try {
       // These methods might not be available on all platforms
       if (Platform.OS === 'android') {
         deviceId = Application.getAndroidId() || '';
-      } 
+      }
       if (!deviceId && Platform.OS === 'ios') {
         // iOS ID is async
         const iosId = await Application.getIosIdForVendorAsync();
@@ -32,7 +32,7 @@ export const getOrCreateDeviceId = async (): Promise<string> => {
     } catch (platformError) {
       console.error('Error getting platform ID:', platformError);
     }
-    
+
     // If no platform ID available, generate a random one
     if (!deviceId) {
       deviceId = `device_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
@@ -59,7 +59,7 @@ export const registerDeviceWithSupabase = async (supabaseClient: any): Promise<s
     await supabaseClient.rpc('set_device_context', { device_id: deviceId });
 
     // Register or update the device record
-    const { data, error } = await supabaseClient.from('devices').upsert(
+    const { error } = await supabaseClient.from('devices').upsert(
       {
         device_identifier: deviceId,
         last_active: new Date().toISOString(),
