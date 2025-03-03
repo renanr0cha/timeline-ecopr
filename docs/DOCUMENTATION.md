@@ -105,18 +105,45 @@ Screen for adding new timeline entries with date selection and notes.
 
 ### Statistics Screen (`src/screens/statistics-screen.tsx`)
 
-Displays community statistics on processing times with filtering options.
+Displays community statistics with enhanced visualization options.
 
-**Functionality:**
-- Fetches aggregate statistics using `statisticsService`
-- Provides filtering by transition type
-- Displays data in both chart and detailed list formats
-- Handles loading and empty states
+**Features:**
+- Multiple view modes:
+  - Processing Times: Shows average processing duration
+  - P2 Waiting ecoPR: Displays waiting applicants count
+- Chart type selection:
+  - Line charts for trend visualization
+  - Bar charts for period comparison
+  - Area charts for magnitude emphasis
+- Weekly breakdown analysis:
+  - Detailed view of selected month
+  - Multiple chart type options
+  - Interactive period selection
 
-**Data Visualization:**
-- Uses `BarChart` from react-native-chart-kit
-- Groups data by month for trend visualization
-- Shows detailed statistics in card layout
+**State Management:**
+```typescript
+const [viewMode, setViewMode] = useState<string>('p2_waiting_ecopr');
+const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
+const [weeklyBreakdown, setWeeklyBreakdown] = useState<WeeklyBreakdown[]>([]);
+const [timeSeriesChartType, setTimeSeriesChartType] = useState<'line' | 'bar' | 'area'>('bar');
+const [weeklyChartType, setWeeklyChartType] = useState<'bar' | 'horizontal' | 'line'>('bar');
+```
+
+**Chart Data Handling:**
+```typescript
+const getWeeklyBreakdownChartData = () => ({
+  labels: weeklyBreakdown.map(week => week.week_range),
+  datasets: [{
+    data: weeklyBreakdown.map(week => week.count || 0)
+  }]
+});
+```
+
+**Layout Structure:**
+- Main statistics chart with type selector
+- Monthly period selection
+- Weekly breakdown section (when month selected)
+- Detailed statistics cards
 
 ## Components
 
@@ -148,6 +175,95 @@ Custom component that combines masked text input with a date picker button.
 - Supports both keyboard input and picker selection
 - Validates date format and range
 - Visual feedback for invalid dates
+
+### Chart Components
+
+#### LineChart (`src/components/charts/line-chart.tsx`)
+
+A custom chart component built on top of react-native-chart-kit for displaying line charts.
+
+**Props:**
+- `data`: Chart data with labels and datasets
+- `height`: Optional chart height (default: 180)
+- `yAxisSuffix`: Optional suffix for y-axis labels
+- `showDots`: Whether to show data points (default: true)
+- `isArea`: Whether to display as area chart (default: false)
+- `isWeekly`: Whether the data represents weekly breakdown (default: false)
+
+**Features:**
+- Supports both monthly and weekly data formats
+- Customizable appearance with dots and area fill
+- Automatic width calculation based on data points
+- Responsive design with horizontal scrolling
+- Custom label formatting for different data types
+
+**Example:**
+```tsx
+<LineChart
+  data={{
+    labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+    datasets: [{
+      data: [5, 3, 7, 2]
+    }]
+  }}
+  showDots
+  isWeekly
+/>
+```
+
+#### BarChart (`src/components/charts/bar-chart.tsx`)
+
+A custom bar chart component supporting both vertical and horizontal orientations.
+
+**Props:**
+- `data`: Chart data with labels and datasets
+- `isHorizontal`: Whether to display bars horizontally (default: false)
+- `yAxisSuffix`: Optional suffix for y-axis labels
+- `isWeekly`: Whether the data represents weekly breakdown (default: false)
+
+**Features:**
+- Supports vertical and horizontal layouts
+- Weekly data formatting support
+- Automatic sizing and spacing
+- Custom color schemes
+- Interactive bar selection
+
+**Example:**
+```tsx
+<BarChart
+  data={{
+    labels: ['Days 1-7', 'Days 8-14', 'Days 15-21', 'Days 22-28'],
+    datasets: [{
+      data: [4, 6, 2, 8]
+    }]
+  }}
+  isWeekly
+  isHorizontal={false}
+/>
+```
+
+### ChartTypeSelector
+
+A reusable component for switching between different chart visualizations.
+
+**Props:**
+- `currentType`: Currently selected chart type
+- `options`: Array of available chart options
+- `onSelect`: Callback function when option is selected
+- `className`: Optional additional styling
+
+**Usage:**
+```tsx
+<ChartTypeSelector
+  currentType="bar"
+  options={[
+    { value: 'line', label: 'Line Chart' },
+    { value: 'bar', label: 'Bar Chart' },
+    { value: 'area', label: 'Area Chart' }
+  ]}
+  onSelect={(type) => setChartType(type)}
+/>
+```
 
 ## Services
 
@@ -246,7 +362,11 @@ Handles fetching and processing of community statistics data.
 
 - **React Native Vector Icons**: Icon library for UI elements
 - **React Native Mask Text**: Text input masking for formatted entry
-- **React Native Chart Kit**: Data visualization library for statistics screen
+- **Custom Chart Components**: Built on top of react-native-chart-kit
+  - `LineChart`: Customizable line and area charts
+  - `BarChart`: Vertical and horizontal bar charts
+  - Support for weekly and monthly data visualization
+  - Interactive features and responsive design
 
 ### Device Integration
 

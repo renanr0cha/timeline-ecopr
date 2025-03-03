@@ -24,7 +24,9 @@ A mobile application to help Canadian PR applicants track their immigration jour
   - PR Card receipt date
 - **📊 Community Statistics**: View aggregated processing times from the community
   - Filter by transition type (AOR→P2, P2→ecoPR, etc.)
-  - See monthly trends and averages
+  - See monthly trends and averages with interactive charts
+  - View weekly breakdowns for detailed insights
+  - Multiple chart types (Line, Bar, Area) for better data visualization
   - Compare your timeline with community averages
 - **🔒 Privacy-Focused**: No user accounts needed, just anonymous device registration
 - **💪 Offline Support**: View your timeline even without an internet connection
@@ -105,11 +107,14 @@ timeline-ecopr/
   - [React Navigation](https://reactnavigation.org/) - Screen navigation
 
 - **Data Visualization**:
-  - [React Native Chart Kit](https://github.com/indiespirit/react-native-chart-kit) - Charts and graphs
+  - Custom Chart Components - Built on top of react-native-chart-kit
+  - Interactive charts with weekly breakdowns
+  - Multiple chart types (Line, Bar, Area)
 
 - **UI Components**:
   - [React Native Vector Icons](https://github.com/oblador/react-native-vector-icons) - Icon library
   - [React Native Mask Text](https://github.com/akinncar/react-native-mask-text) - Text input masking
+  - Custom themed components with NativeWind
 
 - **Backend**:
   - [Supabase](https://supabase.io/) - Backend-as-a-Service
