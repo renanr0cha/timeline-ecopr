@@ -9,34 +9,35 @@ module.exports = {
         // Primary Colors
         'maple-red': '#FF1E38',
         'pure-white': '#FFFFFF',
-        
+
         // Secondary Colors
         'hope-red': '#FF6B7D',
         'snow-white': '#F8F9FA',
-        
+
         // Accent Colors
         'maple-leaf': '#E31837',
-        'frost': '#E9ECEF',
-        
+        frost: '#E9ECEF',
+
         // Status Colors
-        'success': '#2E8540',
-        'waiting': '#FDB813',
-        'inactive': '#8C9196',
-        
+        success: '#2E8540',
+        waiting: '#FDB813',
+        inactive: '#8C9196',
+
         // Text Colors
         'text-primary': '#1A1D1F',
         'text-secondary': '#4A4F54',
         'text-tertiary': '#6C757D',
       },
       fontFamily: {
-        sans: ['Inter', 'System'],
+        sans: ['Lato', 'System'],
+        lato: ['Lato', 'System'],
       },
       fontSize: {
-        'xs': '12px',
-        'sm': '14px',
-        'base': '16px',
-        'lg': '18px',
-        'xl': '20px',
+        xs: '12px',
+        sm: '14px',
+        base: '16px',
+        lg: '18px',
+        xl: '20px',
         '2xl': '24px',
         '3xl': '30px',
       },
@@ -58,12 +59,12 @@ module.exports = {
         12: '48px',
       },
       borderRadius: {
-        'sm': '4px',
-        'md': '8px',
-        'lg': '12px',
-        'xl': '16px',
+        sm: '4px',
+        md: '8px',
+        lg: '12px',
+        xl: '16px',
         '2xl': '24px',
-        'full': '9999px',
+        full: '9999px',
       },
       boxShadow: {
         sm: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
