@@ -44,13 +44,11 @@ const MonthlyStatisticsGroup = ({ month, statistics }: MonthlyStatisticsGroupPro
   return (
     <View className="mb-6 rounded-xl bg-white p-4 shadow-sm">
       <Text className="mb-4 text-lg font-bold text-gray-800">{month}</Text>
-      <View className="rounded-lg overflow-hidden border border-gray-100">
+      <View className="overflow-hidden rounded-lg border border-gray-100">
         {statistics.map((stat, index) => (
           <React.Fragment key={index}>
             <StatisticsCard statistic={stat} hideMonth />
-            {index < statistics.length - 1 && (
-              <View className="h-[1px] bg-gray-200 mx-4" />
-            )}
+            {index < statistics.length - 1 && <View className="mx-4 h-[1px] bg-gray-200" />}
           </React.Fragment>
         ))}
       </View>
@@ -89,11 +87,13 @@ export default function StatisticsScreen() {
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [weeklyBreakdown, setWeeklyBreakdown] = useState<WeeklyBreakdown[]>([]);
   const [useMockData, setUseMockData] = useState(statisticsService.useMockData);
-  
+
   // Chart type selection states
   const [timeSeriesChartType, setTimeSeriesChartType] = useState<'line' | 'bar'>('bar');
   const [weeklyChartType, setWeeklyChartType] = useState<'bar' | 'horizontal' | 'line'>('bar');
-  const [distributionChartType, setDistributionChartType] = useState<'stacked' | 'horizontal'>('stacked');
+  const [distributionChartType, setDistributionChartType] = useState<'stacked' | 'horizontal'>(
+    'stacked'
+  );
 
   const screenWidth = Dimensions.get('window').width;
   const fadeAnim = useState(new Animated.Value(0))[0];
@@ -187,27 +187,25 @@ export default function StatisticsScreen() {
   };
 
   // Chart selection component
-  const ChartTypeSelector = ({ 
-    currentType, 
-    options, 
-    onSelect 
-  }: { 
-    currentType: string, 
-    options: {value: string, label: string}[], 
-    onSelect: (type: any) => void 
+  const ChartTypeSelector = ({
+    currentType,
+    options,
+    onSelect,
+  }: {
+    currentType: string;
+    options: { value: string; label: string }[];
+    onSelect: (type: any) => void;
   }) => (
-    <View className="flex-row justify-center my-2">
+    <View className="my-2 flex-row justify-center">
       {options.map((option) => (
         <TouchableOpacity
           key={option.value}
           onPress={() => onSelect(option.value)}
-          className={`mx-1 px-3 py-1 rounded-full ${
+          className={`mx-1 rounded-full px-3 py-1 ${
             currentType === option.value ? 'bg-purple-500' : 'bg-gray-200'
-          }`}
-        >
-          <Text className={`text-xs ${
-            currentType === option.value ? 'text-white' : 'text-gray-700'
           }`}>
+          <Text
+            className={`text-xs ${currentType === option.value ? 'text-white' : 'text-gray-700'}`}>
             {option.label}
           </Text>
         </TouchableOpacity>
@@ -380,27 +378,26 @@ export default function StatisticsScreen() {
     return (
       <View className="mb-6 rounded-xl bg-white p-4 shadow-sm">
         <Text className="mb-4 text-lg font-bold text-gray-800">{chartTitle}</Text>
-        
+
         <ChartTypeSelector
           currentType={timeSeriesChartType}
           options={[
-            {value: 'bar', label: 'Bar Chart'},
-            {value: 'line', label: 'Line Chart'}
+            { value: 'bar', label: 'Bar Chart' },
+            { value: 'line', label: 'Line Chart' },
           ]}
           onSelect={(type) => setTimeSeriesChartType(type)}
         />
-        
+
         <Text className="mb-2 text-xs text-gray-500">
           {timeSeriesChartType === 'line' && 'Line charts better visualize trends over time'}
           {timeSeriesChartType === 'bar' && 'Bar charts provide clear comparison between periods'}
         </Text>
 
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={true} 
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator
           ref={chartsScrollViewRef}
-          contentContainerStyle={{ paddingHorizontal: 5 }}
-        >
+          contentContainerStyle={{ paddingHorizontal: 5 }}>
           {timeSeriesChartType === 'bar' && (
             <BarChart
               data={chartData}
@@ -437,7 +434,7 @@ export default function StatisticsScreen() {
               showValuesOnTopOfBars
             />
           )}
-          
+
           {timeSeriesChartType === 'line' && (
             <LineChart
               data={chartData}
@@ -481,7 +478,7 @@ export default function StatisticsScreen() {
             />
           )}
         </ScrollView>
-        
+
         <Text className="mt-2 text-center text-xs italic text-gray-500">
           Swipe horizontally to view more months
         </Text>
@@ -524,24 +521,25 @@ export default function StatisticsScreen() {
         <Text className="mb-4 text-lg font-bold text-gray-800">
           Weekly Breakdown: {selectedMonth}
         </Text>
-        
+
         <ChartTypeSelector
           currentType={weeklyChartType}
           options={[
-            {value: 'bar', label: 'Bar Chart'},
-            {value: 'horizontal', label: 'Horizontal Bars'},
-            {value: 'line', label: 'Line Chart'}
+            { value: 'bar', label: 'Bar Chart' },
+            { value: 'horizontal', label: 'Horizontal Bars' },
+            { value: 'line', label: 'Line Chart' },
           ]}
           onSelect={(type) => setWeeklyChartType(type)}
         />
-        
+
         <Text className="mb-2 text-xs text-gray-500">
           {weeklyChartType === 'bar' && 'Bar charts effectively compare discrete time periods'}
-          {weeklyChartType === 'horizontal' && 'Horizontal bars highlight differences between categories'}
+          {weeklyChartType === 'horizontal' &&
+            'Horizontal bars highlight differences between categories'}
           {weeklyChartType === 'line' && 'Line charts show week-to-week progression'}
         </Text>
-        
-        <ScrollView horizontal showsHorizontalScrollIndicator={true}>
+
+        <ScrollView horizontal showsHorizontalScrollIndicator>
           {weeklyChartType === 'bar' && (
             <BarChart
               data={getWeeklyBreakdownChartData()}
@@ -579,7 +577,7 @@ export default function StatisticsScreen() {
               showValuesOnTopOfBars
             />
           )}
-          
+
           {weeklyChartType === 'horizontal' && (
             <BarChart
               data={getWeeklyBreakdownChartData()}
@@ -618,7 +616,7 @@ export default function StatisticsScreen() {
               verticalLabelRotation={90}
             />
           )}
-          
+
           {weeklyChartType === 'line' && (
             <LineChart
               data={getWeeklyBreakdownChartData()}
@@ -663,7 +661,7 @@ export default function StatisticsScreen() {
             />
           )}
         </ScrollView>
-        
+
         <Text className="mt-2 text-center text-xs italic text-gray-500">
           Swipe horizontally to view all weeks
         </Text>
@@ -679,8 +677,8 @@ export default function StatisticsScreen() {
 
     // Create a map of month -> statistics
     const monthMap = new Map<string, CommunityStatistic[]>();
-    
-    statistics.forEach(stat => {
+
+    statistics.forEach((stat) => {
       if (stat.month_year) {
         if (!monthMap.has(stat.month_year)) {
           monthMap.set(stat.month_year, []);
@@ -688,7 +686,7 @@ export default function StatisticsScreen() {
         monthMap.get(stat.month_year)!.push(stat);
       }
     });
-    
+
     // Sort months chronologically (newest first)
     return Array.from(monthMap.entries())
       .sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime())
@@ -698,20 +696,6 @@ export default function StatisticsScreen() {
   return (
     <ScreenContent scrollable>
       <View className="px-4 pb-6 pt-2">
-        <View className="mb-4 flex-row items-center justify-between">
-          <Text className="text-2xl font-bold text-gray-800">Community Statistics</Text>
-
-          <TouchableOpacity
-            onPress={toggleMockData}
-            className={`rounded-full px-3 py-1 ${useMockData ? 'bg-green-500' : 'bg-gray-300'}`}>
-            <Text className="text-xs font-medium text-white">
-              {useMockData ? 'Using Mock Data' : 'Use Mock Data'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        <Text className="mb-6 text-gray-500">View processing times from the community</Text>
-
         <View className="mb-4 flex-row items-center justify-between">
           <Text className="text-2xl font-bold text-gray-800">Community Insights</Text>
 
@@ -724,7 +708,9 @@ export default function StatisticsScreen() {
           </TouchableOpacity>
         </View>
 
-        <Text className="mb-6 text-gray-500">See how processing times compare across the PR journey</Text>
+        <Text className="mb-6 text-gray-500">
+          See how processing times compare across the PR journey
+        </Text>
 
         {/* View Mode buttons */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4">
@@ -789,11 +775,7 @@ export default function StatisticsScreen() {
                 {viewMode === 'processing_times' && (
                   <View>
                     {getStatisticsByMonth().map(({ month, statistics: monthStats }) => (
-                      <MonthlyStatisticsGroup 
-                        key={month} 
-                        month={month} 
-                        statistics={monthStats} 
-                      />
+                      <MonthlyStatisticsGroup key={month} month={month} statistics={monthStats} />
                     ))}
                   </View>
                 )}

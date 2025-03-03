@@ -3,20 +3,14 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Animated,
-  Easing,
-  Platform,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Alert, Animated, Easing, Platform, Text, TouchableOpacity, View } from 'react-native';
 import { MaskedTextInput } from 'react-native-mask-text';
 
 import { ScreenContent } from '../components/screen-content';
+import { SectionHeader } from '../components/section-header';
+import { ThemedButton } from '../components/themed-button';
+import { ThemedCard } from '../components/themed-card';
+import { ThemedInput } from '../components/themed-input';
 import { logger } from '../lib/logger';
 import { timelineService } from '../services/timeline-service';
 import { EntryType, RootStackParamList, TimelineEntry } from '../types';
@@ -49,28 +43,28 @@ const ENTRY_TYPE_OPTIONS: {
     value: 'aor',
     label: 'AOR',
     icon: 'document-text-outline',
-    color: 'bg-blue-500',
+    color: 'bg-maple-red',
     description: 'Acknowledgement of Receipt sent by IRCC',
   },
   {
     value: 'p2',
     label: 'P2',
     icon: 'log-in-outline',
-    color: 'bg-purple-500',
+    color: 'bg-hope-red',
     description: 'Portal 2 login access granted',
   },
   {
     value: 'ecopr',
     label: 'ecoPR',
     icon: 'mail-outline',
-    color: 'bg-green-500',
+    color: 'bg-success',
     description: 'Electronic Confirmation of PR',
   },
   {
     value: 'pr_card',
     label: 'PR Card',
     icon: 'card-outline',
-    color: 'bg-amber-500',
+    color: 'bg-waiting',
     description: 'Permanent Resident Card received',
   },
 ];
@@ -85,7 +79,13 @@ const MILESTONE_SEQUENCE: EntryType[] = ['aor', 'p2', 'ecopr', 'pr_card'];
  * Enhanced with animations and improved UI
  */
 export default function AddEntryScreen({ route }: AddEntryScreenProps) {
-  const { deviceId, entryType: initialEntryType, entryId, onComplete, existingEntries = [] } = route.params;
+  const {
+    deviceId,
+    entryType: initialEntryType,
+    entryId,
+    onComplete,
+    existingEntries = [],
+  } = route.params;
   const [entryType, setEntryType] = useState<EntryType>(initialEntryType || 'aor');
   const [date, setDate] = useState(new Date());
   const [dateText, setDateText] = useState('');
@@ -99,28 +99,28 @@ export default function AddEntryScreen({ route }: AddEntryScreenProps) {
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
-  
+
   // Get the current progress to determine the next step
   const getCurrentStepIndex = (): number => {
     let completedIndex = -1;
-    
+
     MILESTONE_SEQUENCE.forEach((milestone, index) => {
       if (existingEntries.some((entry) => entry.entry_type === milestone)) {
         completedIndex = index;
       }
     });
-    
+
     return completedIndex;
   };
-  
+
   // Determine the next milestone that needs to be added
   const getNextMilestoneType = (): EntryType => {
     const currentIndex = getCurrentStepIndex();
     const nextIndex = currentIndex + 1;
-    
+
     // If we have next milestone, return it, otherwise default to first
-    return nextIndex < MILESTONE_SEQUENCE.length 
-      ? MILESTONE_SEQUENCE[nextIndex] 
+    return nextIndex < MILESTONE_SEQUENCE.length
+      ? MILESTONE_SEQUENCE[nextIndex]
       : MILESTONE_SEQUENCE[0];
   };
 
@@ -273,199 +273,155 @@ export default function AddEntryScreen({ route }: AddEntryScreenProps) {
    * Get color for specific entry type
    */
   const getEntryTypeColor = (type: EntryType): string => {
-    const option = ENTRY_TYPE_OPTIONS.find(opt => opt.value === type);
+    const option = ENTRY_TYPE_OPTIONS.find((opt) => opt.value === type);
     return option?.color || 'bg-gray-500';
   };
 
   return (
     <ScreenContent scrollable>
       <Animated.View
-        className="px-4 pb-6 pt-2"
-        style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
-        <Text className="mb-1 text-2xl font-bold text-gray-800">
-          {isEditing ? 'Edit Milestone' : 'Record Milestone'}
-        </Text>
-        <Text className="mb-6 text-gray-500">
-          {isEditing
-            ? 'Update the details of your PR journey milestone'
-            : 'Document your progress in the Canadian PR process'}
-        </Text>
+        style={{
+          opacity: fadeAnim,
+          transform: [{ translateY: slideAnim }],
+        }}
+        className="flex-1 py-6">
+        <SectionHeader
+          title={isEditing ? 'Edit Timeline Entry' : 'Add Timeline Entry'}
+          description="Record your PR journey milestones"
+          size="lg"
+          className="mb-6"
+        />
 
-        {/* Entry Type Display with Edit Option */}
-        {!showEntryTypeSelection ? (
-          <View className="mb-6">
-            <View className="flex-row items-center justify-between">
-              <Text className="font-medium text-gray-700">Milestone Type</Text>
-              <TouchableOpacity 
-                onPress={() => setShowEntryTypeSelection(true)}
-                className="flex-row items-center"
-              >
-                <Ionicons name="pencil-outline" size={18} color="#3b82f6" />
-                <Text className="ml-1 text-blue-500">Change</Text>
-              </TouchableOpacity>
-            </View>
-            
-            <View className="mt-3 flex-row items-center rounded-xl border border-gray-200 bg-white p-4">
-              <View className={`h-10 w-10 items-center justify-center rounded-full ${getEntryTypeColor(entryType)}`}>
-                <Ionicons
-                  name={ENTRY_TYPE_OPTIONS.find(opt => opt.value === entryType)?.icon as any}
-                  size={20}
-                  color="white"
-                />
+        <ThemedCard className="mb-6">
+          {/* Entry Type Selection */}
+          <View className="mb-4">
+            <Text className="text-text-primary mb-2 text-sm font-medium">Milestone Type</Text>
+            <TouchableOpacity
+              onPress={() => setShowEntryTypeSelection(!showEntryTypeSelection)}
+              className="border-frost bg-pure-white flex-row items-center justify-between rounded-lg border p-3">
+              <View className="flex-row items-center">
+                <View
+                  className={`mr-3 rounded-full p-2 ${ENTRY_TYPE_OPTIONS.find((opt) => opt.value === entryType)?.color}`}>
+                  <Ionicons
+                    name={ENTRY_TYPE_OPTIONS.find((opt) => opt.value === entryType)?.icon as any}
+                    size={20}
+                    color="#FFFFFF"
+                  />
+                </View>
+                <View>
+                  <Text className="text-text-primary text-base font-medium">
+                    {ENTRY_TYPE_OPTIONS.find((opt) => opt.value === entryType)?.label}
+                  </Text>
+                  <Text className="text-text-secondary text-sm">
+                    {ENTRY_TYPE_OPTIONS.find((opt) => opt.value === entryType)?.description}
+                  </Text>
+                </View>
               </View>
-              <View className="ml-3 flex-1">
-                <Text className="text-lg font-medium text-gray-800">
-                  {ENTRY_TYPE_OPTIONS.find(opt => opt.value === entryType)?.label}
-                </Text>
-                <Text className="text-sm text-gray-500">
-                  {ENTRY_TYPE_OPTIONS.find(opt => opt.value === entryType)?.description}
-                </Text>
-              </View>
-            </View>
-          </View>
-        ) : (
-          /* Entry Type Selection */
-          <View className="mb-6">
-            <View className="flex-row items-center justify-between">
-              <Text className="font-medium text-gray-700">Select Milestone Type</Text>
-              <TouchableOpacity 
-                onPress={() => setShowEntryTypeSelection(false)}
-                className="flex-row items-center"
-              >
-                <Ionicons name="close-outline" size={18} color="#64748b" />
-                <Text className="ml-1 text-gray-500">Cancel</Text>
-              </TouchableOpacity>
-            </View>
-            
-            <View className="mt-3 space-y-2">
-              {ENTRY_TYPE_OPTIONS.map((option) => (
-                <TouchableOpacity
-                  key={option.value}
-                  className={`flex-row items-center rounded-xl border p-3 ${
-                    entryType === option.value
-                      ? `${option.color} border-transparent`
-                      : 'border-gray-200 bg-white'
-                  }`}
-                  onPress={() => {
-                    setEntryType(option.value);
-                    setShowEntryTypeSelection(false);
-                  }}>
-                  <View className={`h-8 w-8 items-center justify-center rounded-full ${
-                    entryType === option.value ? 'bg-white bg-opacity-20' : option.color
-                  }`}>
-                    <Ionicons
-                      name={option.icon as any}
-                      size={18}
-                      color={entryType === option.value ? 'white' : 'white'}
-                    />
-                  </View>
-                  <View className="ml-3 flex-1">
-                    <Text
-                      className={`font-medium ${
-                        entryType === option.value ? 'text-white' : 'text-gray-700'
-                      }`}>
-                      {option.label}
-                    </Text>
-                    <Text
-                      className={`text-xs ${
-                        entryType === option.value ? 'text-white text-opacity-80' : 'text-gray-500'
-                      }`}>
-                      {option.description}
-                    </Text>
-                  </View>
-                  {entryType === option.value && (
-                    <Ionicons name="checkmark-circle" size={24} color="white" />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        )}
+              <Ionicons
+                name={showEntryTypeSelection ? 'chevron-up' : 'chevron-down'}
+                size={20}
+                color="#6C757D"
+              />
+            </TouchableOpacity>
 
-        {/* Date Input - Improved UI with increased height */}
-        <View className="mb-6">
-          <Text className="mb-3 font-medium text-gray-700">Date</Text>
-          <View className="overflow-hidden rounded-lg border border-gray-300 shadow-sm">
-            <View className="flex-row">
-              <View className="flex-1 bg-white">
+            {/* Entry Type Options */}
+            {showEntryTypeSelection && (
+              <View className="border-frost bg-pure-white mt-2 rounded-lg border">
+                {ENTRY_TYPE_OPTIONS.map((option, index) => (
+                  <TouchableOpacity
+                    key={option.value}
+                    onPress={() => {
+                      setEntryType(option.value);
+                      setShowEntryTypeSelection(false);
+                    }}
+                    className={`border-frost flex-row items-center p-3 ${
+                      index !== ENTRY_TYPE_OPTIONS.length - 1 ? 'border-b' : ''
+                    }`}>
+                    <View className={`mr-3 rounded-full p-2 ${option.color}`}>
+                      <Ionicons name={option.icon as any} size={20} color="#FFFFFF" />
+                    </View>
+                    <View>
+                      <Text className="text-text-primary text-base font-medium">
+                        {option.label}
+                      </Text>
+                      <Text className="text-text-secondary text-sm">{option.description}</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+
+          {/* Date Input */}
+          <View className="mb-4">
+            <Text className="text-text-primary mb-2 text-sm font-medium">Date Received</Text>
+            <View className="flex-row items-center">
+              <View className="flex-1">
                 <MaskedTextInput
                   mask="9999-99-99"
-                  placeholder="YYYY-MM-DD"
-                  value={dateText}
                   onChangeText={handleDateTextChange}
-                  keyboardType="number-pad"
-                  className="p-6 text-lg font-medium text-gray-700"
-                  style={{ height: 60 }}
+                  value={dateText}
+                  placeholder="YYYY-MM-DD"
+                  placeholderTextColor="#6C757D"
+                  keyboardType="numeric"
+                  className="border-frost bg-pure-white text-text-primary rounded-lg border px-4 text-base"
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    height: 56, // Match ThemedInput height
+                    fontSize: 16,
+                    paddingVertical: 16,
+                    paddingHorizontal: 16,
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: '#E0E0E0',
+                  }}
                 />
               </View>
               <TouchableOpacity
-                className="items-center justify-center bg-blue-500 px-6"
-                onPress={() => setShowDatePicker(true)}>
-                <Ionicons name="calendar-outline" size={26} color="white" />
+                onPress={() => setShowDatePicker(true)}
+                className="border-frost bg-pure-white ml-2 rounded-lg border"
+                style={{ 
+                  height: 56, // Match the input height
+                  width: 56, 
+                  justifyContent: 'center', 
+                  alignItems: 'center' 
+                }}>
+                <Ionicons name="calendar-outline" size={24} color="#FF1E38" />
               </TouchableOpacity>
             </View>
-            <View className="border-t border-gray-200 bg-gray-50 px-4 py-3">
-              <Text className="text-xs text-gray-500">
-                When did you receive this notification or document?
-              </Text>
-            </View>
           </View>
+
+          {/* Notes Input */}
+          <ThemedInput
+            label="Notes (Optional)"
+            value={notes}
+            onChangeText={setNotes}
+            placeholder="Add any additional details..."
+            multiline
+            numberOfLines={4}
+            className="h-24"
+          />
+        </ThemedCard>
+
+        {/* Action Buttons */}
+        <View className="flex-row justify-end space-x-3">
+          <ThemedButton variant="secondary" onPress={() => navigation.goBack()}>
+            Cancel
+          </ThemedButton>
+          <ThemedButton variant="primary" onPress={handleSubmit} loading={submitting}>
+            {isEditing ? 'Save Changes' : 'Add Entry'}
+          </ThemedButton>
         </View>
 
-        {/* Date Picker */}
+        {/* Date Picker Modal */}
         {showDatePicker && (
           <DateTimePicker
             value={date}
             mode="date"
             display={Platform.OS === 'ios' ? 'spinner' : 'default'}
             onChange={handleDateChange}
-            maximumDate={new Date()}
           />
         )}
-
-        {/* Notes Input */}
-        <View className="mb-8">
-          <Text className="mb-3 font-medium text-gray-700">Additional Notes</Text>
-          <View className="overflow-hidden rounded-lg border border-gray-300 shadow-sm">
-            <TextInput
-              value={notes}
-              onChangeText={setNotes}
-              placeholder="Add details like reference numbers or specific information for your records..."
-              multiline
-              numberOfLines={4}
-              className="h-32 bg-white p-4 text-gray-700"
-              textAlignVertical="top"
-            />
-            <View className="border-t border-gray-200 bg-gray-50 px-3 py-2">
-              <Text className="text-xs text-gray-500">
-                Add details like reference numbers or specific information for your records
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Submit Button */}
-        <View className="mt-4">
-          <TouchableOpacity
-            className={`items-center rounded-xl py-4 ${submitting ? 'bg-gray-400' : 'bg-blue-500'}`}
-            onPress={handleSubmit}
-            disabled={submitting}>
-            {submitting ? (
-              <ActivityIndicator color="white" />
-            ) : (
-              <Text className="font-bold text-white">
-                {isEditing ? 'Save Changes' : 'Save Milestone'}
-              </Text>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            className="mt-2 items-center rounded-xl py-4"
-            onPress={() => navigation.goBack()}
-            disabled={submitting}>
-            <Text className="text-gray-600">Cancel</Text>
-          </TouchableOpacity>
-        </View>
       </Animated.View>
     </ScreenContent>
   );

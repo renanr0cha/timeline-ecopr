@@ -13,6 +13,9 @@ import {
 
 import { ProgressSummary } from '../components/progress-summary';
 import { ScreenContent } from '../components/screen-content';
+import { SectionHeader } from '../components/section-header';
+import { ThemedButton } from '../components/themed-button';
+import { ThemedCard } from '../components/themed-card';
 import { TimelineView } from '../components/timeline-view';
 import { logger } from '../lib/logger';
 import { timelineService } from '../services/timeline-service';
@@ -27,6 +30,7 @@ type HomeScreenNavigationProp = NativeStackNavigationProp<
       entryType?: EntryType;
       entryId?: string;
       onComplete?: () => void;
+      existingEntries?: TimelineEntry[];
     };
   },
   'Home'
@@ -98,8 +102,8 @@ export default function HomeScreen({ route }: HomeScreenProps) {
    */
   const handleAddEntry = (entryType: EntryType) => {
     setNextStepType(entryType);
-    navigation.navigate('AddEntry', { 
-      deviceId, 
+    navigation.navigate('AddEntry', {
+      deviceId,
       entryType,
       existingEntries: entries,
       onComplete: () => {
@@ -113,7 +117,7 @@ export default function HomeScreen({ route }: HomeScreenProps) {
           setNextStepType(milestones[currentIndex + 1]);
           setShowAddNextStepPrompt(true);
         }
-      }
+      },
     });
   };
 
@@ -175,92 +179,118 @@ export default function HomeScreen({ route }: HomeScreenProps) {
 
   return (
     <ScreenContent scrollable>
-      <View className="mb-4 flex-row items-center justify-between">
-        <Text className="text-2xl font-bold text-gray-800">Your PR Timeline</Text>
-
-        <TouchableOpacity
-          onPress={toggleMockData}
-          className={`rounded-full px-3 py-1 ${useMockData ? 'bg-green-500' : 'bg-gray-300'}`}>
-          <Text className="text-xs font-medium text-white">
-            {useMockData ? 'Using Sample Data' : 'Use Sample Data'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {loading ? (
-        <View className="items-center justify-center py-12">
-          <ActivityIndicator size="large" color="#0284c7" />
-          <Text className="mt-4 text-gray-500">Loading your journey data...</Text>
-        </View>
-      ) : (
-        <>
-          {/* Progress Summary - Always shown, with empty state if no entries */}
-          <ProgressSummary 
-            entries={entries} 
-            onAddEntry={handleAddEntry} 
-            emptyState={!hasEntries}
+      <View className="flex-1 px-4 py-6">
+        {/* Header Section */}
+        <View className="mb-6 flex-row items-center justify-between">
+          <SectionHeader
+            title="Your PR Journey"
+            description="Track your progress towards permanent residency"
+            size="lg"
+            className="flex-1 mb-0"
           />
 
-          {/* Collapsible Timeline Section - Not in a card component anymore */}
-          {hasEntries && (
-            <View className="mb-6">
-              {/* Timeline Header with Toggle */}
-              <TouchableOpacity
-                onPress={toggleTimelineExpanded}
-                className="flex-row items-center justify-between p-4">
-                <Text className="text-lg font-bold text-gray-800">Journey History</Text>
-                <Animated.View style={{ transform: [{ rotate }] }}>
-                  <Ionicons name="chevron-down" size={24} color="#64748b" />
-                </Animated.View>
-              </TouchableOpacity>
-
-              {/* Timeline Content - using maxHeight instead of height for better behavior */}
-              {timelineExpanded && (
-                <View className="bg-white">
-                  <TimelineView entries={entries} />
-                </View>
-              )}
-            </View>
-          )}
-
-          {/* Add Next Step Prompt - shown after adding an entry */}
-          {showAddNextStepPrompt && nextStepType && (
-            <View className="mb-6 rounded-xl bg-white p-4 shadow-sm">
-              <Text className="mb-2 text-lg font-bold text-gray-800">
-                Next Step Available
-              </Text>
-              <Text className="mb-4 text-gray-600">
-                Ready to record your {nextStepType.toUpperCase()} milestone? Adding it now will keep your timeline up-to-date.
-              </Text>
-              <View className="flex-row justify-end space-x-3">
-                <TouchableOpacity
-                  onPress={() => handleAddNextStepResponse(false)}
-                  className="rounded-lg border border-gray-300 px-4 py-2">
-                  <Text className="text-gray-700">Later</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => handleAddNextStepResponse(true)}
-                  className="rounded-lg bg-blue-500 px-4 py-2">
-                  <Text className="text-white">Add {nextStepType.toUpperCase()}</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
-
-          {/* Statistics Card - Always shown */}
           <TouchableOpacity
-            onPress={goToStatistics}
-            className="mb-6 rounded-xl bg-white p-5 shadow-sm">
-            <View className="flex-row items-center justify-between">
-              <View>
-                <Text className="text-lg font-bold text-gray-800">Community Insights</Text>
-                <Text className="text-gray-500">See how your timeline compares</Text>
-              </View>
-              <Ionicons name="bar-chart-outline" size={28} color="#8b5cf6" />
-            </View>
+            onPress={toggleMockData}
+            className={`rounded-full px-3 py-1.5 ${
+              useMockData ? 'bg-success/10' : 'bg-inactive/10'
+            }`}>
+            <Text className={`text-xs font-medium ${
+              useMockData ? 'text-success' : 'text-inactive'
+            }`}>
+              {useMockData ? 'Using Sample Data' : 'Use Sample Data'}
+            </Text>
           </TouchableOpacity>
-        </>
-      )}
+        </View>
+
+        {loading ? (
+          <ThemedCard className="items-center justify-center py-12">
+            <ActivityIndicator size="large" color="#FF1E38" />
+            <Text className="mt-4 text-text-secondary">
+              Loading your journey data...
+            </Text>
+          </ThemedCard>
+        ) : (
+          <>
+            {/* Progress Summary - Always shown, with empty state if no entries */}
+            <ThemedCard className="mb-6" variant="elevated">
+              <ProgressSummary 
+                entries={entries} 
+                onAddEntry={handleAddEntry} 
+                emptyState={!hasEntries}
+              />
+            </ThemedCard>
+
+            {/* Collapsible Timeline Section */}
+            {hasEntries && (
+              <ThemedCard className="mb-6" variant="default">
+                {/* Timeline Header with Toggle */}
+                <TouchableOpacity
+                  onPress={toggleTimelineExpanded}
+                  className="flex-row items-center justify-between">
+                  <SectionHeader
+                    title="Journey History"
+                    description="View your milestone timeline"
+                    className="flex-1 mb-0"
+                  />
+                  <Animated.View style={{ transform: [{ rotate }] }}>
+                    <Ionicons name="chevron-down" size={24} color="#6C757D" />
+                  </Animated.View>
+                </TouchableOpacity>
+
+                {/* Timeline Content */}
+                {timelineExpanded && (
+                  <View className="mt-4">
+                    <TimelineView entries={entries} />
+                  </View>
+                )}
+              </ThemedCard>
+            )}
+
+            {/* Add Next Step Prompt */}
+            {showAddNextStepPrompt && nextStepType && (
+              <ThemedCard className="mb-6" variant="elevated">
+                <SectionHeader
+                  title="Next Step Available"
+                  description={`Ready to record your ${nextStepType.toUpperCase()} milestone? Adding it now will keep your timeline up-to-date.`}
+                />
+                <View className="mt-4 flex-row justify-end space-x-3">
+                  <ThemedButton
+                    variant="secondary"
+                    size="sm"
+                    onPress={() => handleAddNextStepResponse(false)}>
+                    Later
+                  </ThemedButton>
+                  <ThemedButton
+                    variant="primary"
+                    size="sm"
+                    onPress={() => handleAddNextStepResponse(true)}>
+                    {`Add ${nextStepType.toUpperCase()}`}
+                  </ThemedButton>
+                </View>
+              </ThemedCard>
+            )}
+
+            {/* Statistics Card */}
+            <TouchableOpacity onPress={goToStatistics} className="mb-6">
+              <ThemedCard variant="elevated">
+                <View className="flex-row items-center justify-between">
+                  <View className="flex-1">
+                    <Text className="text-lg font-bold text-text-primary">
+                      Community Insights
+                    </Text>
+                    <Text className="text-text-secondary">
+                      See how your timeline compares
+                    </Text>
+                  </View>
+                  <View className="rounded-full bg-maple-red/10 p-2">
+                    <Ionicons name="bar-chart-outline" size={24} color="#FF1E38" />
+                  </View>
+                </View>
+              </ThemedCard>
+            </TouchableOpacity>
+          </>
+        )}
+      </View>
     </ScreenContent>
   );
 }
