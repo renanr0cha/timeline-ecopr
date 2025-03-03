@@ -1,18 +1,19 @@
-import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Animated,
   Dimensions,
   ScrollView,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
-import { BarChart, LineChart } from 'react-native-chart-kit';
 
+import { BarChart } from '../components/charts/bar-chart';
+import { LineChart } from '../components/charts/line-chart';
 import { ScreenContent } from '../components/screen-content';
+import { SectionHeader } from '../components/section-header';
 import { StatisticsCard } from '../components/statistics-card';
+import { ThemedCard } from '../components/themed-card';
 import { logger } from '../lib/logger';
 import { statisticsService } from '../services/statistics-service';
 import { CommunityStatistic, WeeklyBreakdown } from '../types';
@@ -42,9 +43,9 @@ const MonthlyStatisticsGroup = ({ month, statistics }: MonthlyStatisticsGroupPro
   if (!statistics.length) return null;
 
   return (
-    <View className="mb-6 rounded-xl bg-white p-4 shadow-sm">
-      <Text className="mb-4 text-lg font-bold text-gray-800">{month}</Text>
-      <View className="overflow-hidden rounded-lg border border-gray-100">
+    <ThemedCard className="mb-2">
+      <SectionHeader title={month} size="sm" />
+      <View>
         {statistics.map((stat, index) => (
           <React.Fragment key={index}>
             <StatisticsCard statistic={stat} hideMonth />
@@ -52,7 +53,7 @@ const MonthlyStatisticsGroup = ({ month, statistics }: MonthlyStatisticsGroupPro
           </React.Fragment>
         ))}
       </View>
-    </View>
+    </ThemedCard>
   );
 };
 
@@ -89,7 +90,7 @@ export default function StatisticsScreen() {
   const [useMockData, setUseMockData] = useState(statisticsService.useMockData);
 
   // Chart type selection states
-  const [timeSeriesChartType, setTimeSeriesChartType] = useState<'line' | 'bar'>('bar');
+  const [timeSeriesChartType, setTimeSeriesChartType] = useState<'line' | 'bar' | 'area'>('bar');
   const [weeklyChartType, setWeeklyChartType] = useState<'bar' | 'horizontal' | 'line'>('bar');
   const [distributionChartType, setDistributionChartType] = useState<'stacked' | 'horizontal'>(
     'stacked'
@@ -120,9 +121,11 @@ export default function StatisticsScreen() {
       setSelectedMonth(null);
       setWeeklyBreakdown([]);
 
-      // If viewing P2 waiting ecoPR, use that specific transition type
+      // Set the transition type based on view mode
       const effectiveTransitionType =
-        viewMode === 'p2_waiting_ecopr' ? 'p2-ecopr' : selectedTransitionType;
+        viewMode === 'p2_waiting_ecopr'
+          ? 'p2-ecopr'
+          : selectedTransitionType;
 
       const data = await statisticsService.getCommunityStats(effectiveTransitionType);
       setStatistics(data);
@@ -175,10 +178,10 @@ export default function StatisticsScreen() {
       } else {
         // Otherwise generate mock weekly data - this would normally come from the API
         const mockWeeklyData: WeeklyBreakdown[] = [
-          { week_range: `${month} 1-7`, count: Math.floor(Math.random() * 5) + 1 },
-          { week_range: `${month} 8-14`, count: Math.floor(Math.random() * 5) + 1 },
-          { week_range: `${month} 15-21`, count: Math.floor(Math.random() * 5) + 1 },
-          { week_range: `${month} 22-28`, count: Math.floor(Math.random() * 5) + 1 },
+          { week_range: '1-7', count: Math.floor(Math.random() * 5) + 1 },
+          { week_range: '8-14', count: Math.floor(Math.random() * 5) + 1 },
+          { week_range: '15-21', count: Math.floor(Math.random() * 5) + 1 },
+          { week_range: '22-28', count: Math.floor(Math.random() * 5) + 1 },
         ];
 
         setWeeklyBreakdown(mockWeeklyData);
@@ -191,21 +194,27 @@ export default function StatisticsScreen() {
     currentType,
     options,
     onSelect,
+    className,
   }: {
     currentType: string;
     options: { value: string; label: string }[];
     onSelect: (type: any) => void;
+    className?: string;
   }) => (
-    <View className="my-2 flex-row justify-center">
+    <View className={`my-2 flex-row justify-center ${className || ''}`}>
       {options.map((option) => (
         <TouchableOpacity
           key={option.value}
           onPress={() => onSelect(option.value)}
-          className={`mx-1 rounded-full px-3 py-1 ${
-            currentType === option.value ? 'bg-purple-500' : 'bg-gray-200'
+          className={`mx-1 rounded-full px-3 py-1.5 ${
+            currentType === option.value 
+              ? 'bg-maple-leaf shadow-sm' 
+              : 'bg-gray-100'
           }`}>
           <Text
-            className={`text-xs ${currentType === option.value ? 'text-white' : 'text-gray-700'}`}>
+            className={`text-center text-sm font-medium ${
+              currentType === option.value ? 'text-white' : 'text-gray-700'
+            }`}>
             {option.label}
           </Text>
         </TouchableOpacity>
@@ -217,36 +226,18 @@ export default function StatisticsScreen() {
    * Prepare data for the processing times chart
    */
   const getProcessingTimesChartData = () => {
-    // If no data, return empty chart data
-    if (!statistics.length) {
-      return {
-        labels: ['No Data'],
-        datasets: [{ data: [0] }],
-      };
-    }
-
-    // Sort by date and take last 12 months for the chart (oldest to newest)
-    const sortedStats = [...statistics].sort((a, b) => {
-      if (!a.month_year || !b.month_year) return 0;
-      return new Date(a.month_year).getTime() - new Date(b.month_year).getTime();
-    });
-
-    const recentStats = sortedStats.slice(-12);
-
+    // If no specific transition type is selected (All), show all transitions
+    // Otherwise, filter by the selected transition type
+    const filteredStats = statistics.filter(stat => 
+      !selectedTransitionType || stat.transition_type === selectedTransitionType
+    );
     return {
-      labels: recentStats.map((stat) => stat.month_year || 'Unknown'),
+      labels: filteredStats.map(stat => stat.month_year || ''),
       datasets: [
         {
-          data: recentStats.map((stat) => stat.avg_days),
-          color: (opacity = 1) => {
-            // Use different colors based on transition type when filtered
-            if (selectedTransitionType === 'aor-p2') return `rgba(59, 130, 246, ${opacity})`;
-            if (selectedTransitionType === 'p2-ecopr') return `rgba(168, 85, 247, ${opacity})`;
-            if (selectedTransitionType === 'ecopr-pr_card') return `rgba(34, 197, 94, ${opacity})`;
-            return `rgba(2, 132, 199, ${opacity})`;
-          },
-        },
-      ],
+          data: filteredStats.map(stat => stat.avg_days || 0),
+        }
+      ]
     };
   };
 
@@ -254,34 +245,14 @@ export default function StatisticsScreen() {
    * Prepare data for the P2 waiting ecoPR chart
    */
   const getWaitingChartData = () => {
-    // If no data, return empty chart data
-    if (!statistics.length) {
-      return {
-        labels: ['No Data'],
-        datasets: [{ data: [0] }],
-      };
-    }
-
-    // Sort by date and take last 12 months for the chart (oldest to newest)
-    const sortedStats = [...statistics].sort((a, b) => {
-      if (!a.month_year || !b.month_year) return 0;
-      return new Date(a.month_year).getTime() - new Date(b.month_year).getTime();
-    });
-
-    const recentStats = sortedStats.slice(-12);
-
-    // For this view, we're showing the count of people with P2 waiting for ecoPR
+    const filteredStats = statistics.filter(stat => stat.transition_type === 'p2-ecopr');
     return {
-      labels: recentStats.map((stat) => stat.month_year || 'Unknown'),
+      labels: filteredStats.map(stat => stat.month_year || ''),
       datasets: [
         {
-          data: recentStats.map(
-            (stat) => stat.waiting_count || stat.count || Math.floor(Math.random() * 15) + 1
-          ),
-          color: (opacity = 1) => `rgba(168, 85, 247, ${opacity})`, // Purple for P2 → ecoPR
-          strokeWidth: timeSeriesChartType === 'line' ? 2 : 0,
-        },
-      ],
+          data: filteredStats.map(stat => stat.waiting_count || stat.count || 0),
+        }
+      ]
     };
   };
 
@@ -289,22 +260,13 @@ export default function StatisticsScreen() {
    * Prepare data for the weekly breakdown chart
    */
   const getWeeklyBreakdownChartData = () => {
-    if (!weeklyBreakdown.length) {
-      return {
-        labels: ['No Data'],
-        datasets: [{ data: [0] }],
-      };
-    }
-
     return {
-      labels: weeklyBreakdown.map((week) => week.week_range),
+      labels: weeklyBreakdown.map(week => week.week_range),
       datasets: [
         {
-          data: weeklyBreakdown.map((week) => week.count),
-          color: (opacity = 1) => `rgba(168, 85, 247, ${opacity})`, // Purple for P2 → ecoPR
-          strokeWidth: weeklyChartType === 'line' ? 2 : 0,
-        },
-      ],
+          data: weeklyBreakdown.map(week => week.count || 0),
+        }
+      ]
     };
   };
 
@@ -373,143 +335,98 @@ export default function StatisticsScreen() {
     const chartTitle =
       viewMode === 'processing_times' ? 'Processing Times Trend' : 'P2 Waiting for ecoPR by Month';
 
-    const chartWidth = getChartWidth(chartData);
-
     return (
-      <View className="mb-6 rounded-xl bg-white p-4 shadow-sm">
-        <Text className="mb-4 text-lg font-bold text-gray-800">{chartTitle}</Text>
+      <ThemedCard className="mb-4">
+        <View>
+          <Text className="mb-4 text-lg font-bold text-gray-800">{chartTitle}</Text>
 
-        <ChartTypeSelector
-          currentType={timeSeriesChartType}
-          options={[
-            { value: 'bar', label: 'Bar Chart' },
-            { value: 'line', label: 'Line Chart' },
-          ]}
-          onSelect={(type) => setTimeSeriesChartType(type)}
-        />
-
-        <Text className="mb-2 text-xs text-gray-500">
-          {timeSeriesChartType === 'line' && 'Line charts better visualize trends over time'}
-          {timeSeriesChartType === 'bar' && 'Bar charts provide clear comparison between periods'}
-        </Text>
-
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator
-          ref={chartsScrollViewRef}
-          contentContainerStyle={{ paddingHorizontal: 5 }}>
-          {timeSeriesChartType === 'bar' && (
-            <BarChart
-              data={chartData}
-              width={chartWidth}
-              height={180}
-              yAxisLabel=""
-              yAxisSuffix={yAxisSuffix}
-              chartConfig={{
-                backgroundColor: '#ffffff',
-                ...getChartGradient(),
-                decimalPlaces: 0,
-                color: (opacity = 1) => `rgba(2, 132, 199, 1)`,
-                labelColor: (opacity = 1) => `rgba(71, 85, 105, ${opacity})`,
-                style: {
-                  borderRadius: 16,
-                },
-                barPercentage: 0.6,
-                propsForBackgroundLines: {
-                  strokeDasharray: '6, 4',
-                  strokeWidth: 1,
-                  stroke: '#e2e8f0',
-                },
-                propsForLabels: {
-                  fontSize: 10,
-                  rotation: 0,
-                },
-                barRadius: 5,
-              }}
-              style={{
-                marginVertical: 8,
-                borderRadius: 16,
-              }}
-              verticalLabelRotation={0}
-              showValuesOnTopOfBars
+          <View className="flex-row justify-end mb-2">
+            <ChartTypeSelector
+              currentType={timeSeriesChartType}
+              options={[
+                { value: 'line', label: 'Line Chart' },
+                { value: 'bar', label: 'Bar Chart' },
+                { value: 'area', label: 'Area Chart' }
+              ]}
+              onSelect={setTimeSeriesChartType}
             />
-          )}
-
-          {timeSeriesChartType === 'line' && (
-            <LineChart
-              data={chartData}
-              width={chartWidth}
-              height={180}
-              yAxisLabel=""
-              yAxisSuffix={yAxisSuffix}
-              chartConfig={{
-                backgroundColor: '#ffffff',
-                ...getChartGradient(),
-                decimalPlaces: 0,
-                color: (opacity = 1) => `rgba(2, 132, 199, ${opacity})`,
-                labelColor: (opacity = 1) => `rgba(71, 85, 105, ${opacity})`,
-                style: {
-                  borderRadius: 16,
-                },
-                propsForDots: {
-                  r: '5',
-                  strokeWidth: '1',
-                  stroke: '#0284c7',
-                },
-                propsForBackgroundLines: {
-                  strokeDasharray: '6, 4',
-                  strokeWidth: 1,
-                  stroke: '#e2e8f0',
-                },
-                propsForLabels: {
-                  fontSize: 10,
-                  rotation: 0,
-                },
-                strokeWidth: 2,
-              }}
-              style={{
-                marginVertical: 8,
-                borderRadius: 16,
-              }}
-              bezier
-              withInnerLines={false}
-              withShadow={false}
-              fromZero
-            />
-          )}
-        </ScrollView>
-
-        <Text className="mt-2 text-center text-xs italic text-gray-500">
-          Swipe horizontally to view more months
-        </Text>
-
-        {viewMode === 'p2_waiting_ecopr' && (
-          <View className="mt-2">
-            <Text className="mb-2 text-center text-xs text-gray-500">
-              Tap on a month to see weekly breakdown
-            </Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View className="flex-row flex-wrap">
-                {chartData.labels.map((month, index) => (
-                  <TouchableOpacity
-                    key={month}
-                    onPress={() => handleMonthSelect(month)}
-                    className={`m-1 rounded-full px-3 py-1 ${
-                      selectedMonth === month ? 'bg-purple-500' : 'bg-gray-200'
-                    }`}>
-                    <Text
-                      className={`text-xs ${
-                        selectedMonth === month ? 'text-white' : 'text-gray-700'
-                      }`}>
-                      {month}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </ScrollView>
           </View>
-        )}
-      </View>
+
+          <Text className="mb-2 text-xs text-gray-500">
+            {timeSeriesChartType === 'line' && 'Line charts better visualize trends over time'}
+            {timeSeriesChartType === 'bar' && 'Bar charts provide clear comparison between periods'}
+            {timeSeriesChartType === 'area' && 'Area charts emphasize the magnitude of values over time'}
+          </Text>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            ref={chartsScrollViewRef}
+            contentContainerStyle={{ paddingHorizontal: 5 }}>
+            <View className="min-w-full">
+              {timeSeriesChartType === 'line' && (
+                <LineChart
+                  data={chartData}
+                  yAxisSuffix={yAxisSuffix}
+                  showDots
+                  isWeekly={selectedMonth !== null}
+                />
+              )}
+
+              {timeSeriesChartType === 'bar' && (
+                <BarChart
+                  data={chartData}
+                  yAxisSuffix={yAxisSuffix}
+                  isWeekly={selectedMonth !== null}
+                />
+              )}
+
+              {timeSeriesChartType === 'area' && (
+                <LineChart
+                  data={chartData}
+                  yAxisSuffix={yAxisSuffix}
+                  showDots={false}
+                  isArea
+                  isWeekly={selectedMonth !== null}
+                />
+              )}
+            </View>
+          </ScrollView>
+
+          <Text className="mt-2 text-center text-xs italic text-gray-500">
+            Swipe horizontally to view more months
+          </Text>
+
+          {viewMode === 'p2_waiting_ecopr' && (
+            <View className="mt-4">
+              <Text className="mb-2 text-center text-xs text-gray-500">
+                Select a month to see weekly breakdown
+              </Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View className="flex-row flex-wrap">
+                  {statistics
+                    .filter(stat => stat.transition_type === 'p2-ecopr')
+                    .map((stat) => (
+                      <TouchableOpacity
+                        key={stat.month_year}
+                        onPress={() => handleMonthSelect(stat.month_year || '')}
+                        className={`m-1 rounded-full px-3 py-1 ${
+                          selectedMonth === stat.month_year ? 'bg-maple-leaf' : 'bg-gray-200'
+                        }`}>
+                        <Text
+                          className={`text-xs ${
+                            selectedMonth === stat.month_year ? 'text-white' : 'text-gray-700'
+                          }`}>
+                          {stat.month_year}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                </View>
+              </ScrollView>
+            </View>
+          )}
+        </View>
+      </ThemedCard>
     );
   };
 
@@ -525,11 +442,12 @@ export default function StatisticsScreen() {
         <ChartTypeSelector
           currentType={weeklyChartType}
           options={[
-            { value: 'bar', label: 'Bar Chart' },
-            { value: 'horizontal', label: 'Horizontal Bars' },
-            { value: 'line', label: 'Line Chart' },
+            { value: 'bar', label: 'Bar' },
+            { value: 'line', label: 'Line' },
+            { value: 'horizontal', label: 'Horizontal' },
           ]}
-          onSelect={(type) => setWeeklyChartType(type)}
+          onSelect={setWeeklyChartType}
+          className="text-white"
         />
 
         <Text className="mb-2 text-xs text-gray-500">
@@ -539,132 +457,32 @@ export default function StatisticsScreen() {
           {weeklyChartType === 'line' && 'Line charts show week-to-week progression'}
         </Text>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator>
-          {weeklyChartType === 'bar' && (
-            <BarChart
-              data={getWeeklyBreakdownChartData()}
-              width={Math.max(screenWidth - 40, weeklyBreakdown.length * 100)}
-              height={180}
-              yAxisLabel=""
-              yAxisSuffix=""
-              chartConfig={{
-                backgroundColor: '#ffffff',
-                backgroundGradientFrom: '#f3e8ff',
-                backgroundGradientTo: '#ffffff',
-                decimalPlaces: 0,
-                color: (opacity = 1) => `rgba(168, 85, 247, 1)`,
-                labelColor: (opacity = 1) => `rgba(71, 85, 105, ${opacity})`,
-                style: {
-                  borderRadius: 16,
-                },
-                barPercentage: 0.6,
-                propsForBackgroundLines: {
-                  strokeDasharray: '6, 4',
-                  strokeWidth: 1,
-                  stroke: '#e2e8f0',
-                },
-                propsForLabels: {
-                  fontSize: 10,
-                  rotation: 0,
-                },
-                barRadius: 5,
-              }}
-              style={{
-                marginVertical: 8,
-                borderRadius: 16,
-              }}
-              verticalLabelRotation={0}
-              showValuesOnTopOfBars
-            />
-          )}
-
-          {weeklyChartType === 'horizontal' && (
-            <BarChart
-              data={getWeeklyBreakdownChartData()}
-              width={Math.max(screenWidth - 40, 250)}
-              height={240}
-              yAxisLabel=""
-              yAxisSuffix=""
-              chartConfig={{
-                backgroundColor: '#ffffff',
-                backgroundGradientFrom: '#f3f3ff',
-                backgroundGradientTo: '#ffffff',
-                decimalPlaces: 0,
-                color: (opacity = 1) => `rgba(168, 85, 247, ${opacity})`,
-                labelColor: (opacity = 1) => `rgba(71, 85, 105, ${opacity})`,
-                style: {
-                  borderRadius: 16,
-                },
-                barPercentage: 0.6,
-                propsForBackgroundLines: {
-                  strokeDasharray: '6, 4',
-                  strokeWidth: 1,
-                  stroke: '#e2e8f0',
-                },
-                propsForLabels: {
-                  fontSize: 10,
-                  rotation: 0,
-                },
-                barRadius: 5,
-              }}
-              style={{
-                marginVertical: 8,
-                borderRadius: 16,
-              }}
-              showValuesOnTopOfBars
-              fromZero
-              verticalLabelRotation={90}
-            />
-          )}
-
-          {weeklyChartType === 'line' && (
-            <LineChart
-              data={getWeeklyBreakdownChartData()}
-              width={Math.max(screenWidth - 40, weeklyBreakdown.length * 100)}
-              height={180}
-              yAxisLabel=""
-              yAxisSuffix=""
-              chartConfig={{
-                backgroundColor: '#ffffff',
-                backgroundGradientFrom: '#f3f3ff',
-                backgroundGradientTo: '#ffffff',
-                decimalPlaces: 0,
-                color: (opacity = 1) => `rgba(168, 85, 247, ${opacity})`,
-                labelColor: (opacity = 1) => `rgba(71, 85, 105, ${opacity})`,
-                style: {
-                  borderRadius: 16,
-                },
-                propsForDots: {
-                  r: '5',
-                  strokeWidth: '1',
-                  stroke: '#a855f7',
-                },
-                propsForBackgroundLines: {
-                  strokeDasharray: '6, 4',
-                  strokeWidth: 1,
-                  stroke: '#e2e8f0',
-                },
-                propsForLabels: {
-                  fontSize: 10,
-                  rotation: 0,
-                },
-                strokeWidth: 2,
-              }}
-              style={{
-                marginVertical: 8,
-                borderRadius: 16,
-              }}
-              bezier
-              withInnerLines={false}
-              withShadow={false}
-              fromZero
-            />
-          )}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <View className="min-w-full">
+            {weeklyChartType === 'line' ? (
+              <LineChart
+                data={getWeeklyBreakdownChartData()}
+                showDots
+              />
+            ) : weeklyChartType === 'horizontal' ? (
+              <BarChart
+                data={{
+                  labels: getWeeklyBreakdownChartData().labels.reverse(),
+                  datasets: [{
+                    data: getWeeklyBreakdownChartData().datasets[0].data.reverse()
+                  }]
+                }}
+                horizontal
+                isWeekly
+              />
+            ) : (
+              <BarChart
+                data={getWeeklyBreakdownChartData()}
+                isWeekly
+              />
+            )}
+          </View>
         </ScrollView>
-
-        <Text className="mt-2 text-center text-xs italic text-gray-500">
-          Swipe horizontally to view all weeks
-        </Text>
       </View>
     );
   };
@@ -694,106 +512,64 @@ export default function StatisticsScreen() {
   };
 
   return (
-    <ScreenContent scrollable>
-      <View className="px-4 pb-6 pt-2">
-        <View className="mb-4 flex-row items-center justify-between">
-          <Text className="text-2xl font-bold text-gray-800">Community Insights</Text>
+    <ScreenContent>
+      <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
+        <Animated.View style={{ opacity: fadeAnim }}>
+          <View className="mb-4 flex-row items-center justify-between">
+            <Text className="text-2xl font-bold text-gray-800">Community Statistics</Text>
+            <TouchableOpacity
+              onPress={toggleMockData}
+              className={`rounded-full px-3 py-1 ${
+                useMockData ? 'bg-maple-leaf' : 'bg-gray-200'
+              }`}>
+              <Text
+                className={`text-xs font-medium ${
+                  useMockData ? 'text-white' : 'text-gray-700'
+                }`}>
+                {useMockData ? 'Using Mock Data' : 'Use Mock Data'}
+              </Text>
+            </TouchableOpacity>
+          </View>
 
-          <TouchableOpacity
-            onPress={toggleMockData}
-            className={`rounded-full px-3 py-1 ${useMockData ? 'bg-green-500' : 'bg-gray-300'}`}>
-            <Text className="text-xs font-medium text-white">
-              {useMockData ? 'Using Sample Data' : 'Use Sample Data'}
-            </Text>
-          </TouchableOpacity>
-        </View>
+          <View className="mb-4">
+            <ChartTypeSelector
+              currentType={viewMode}
+              options={VIEW_MODES}
+              onSelect={setViewMode}
+            />
+          </View>
 
-        <Text className="mb-6 text-gray-500">
-          See how processing times compare across the PR journey
-        </Text>
+          {/* Transition Type Selector */}
+          {viewMode === 'processing_times' && (
+            <View className="mb-4">
+              <Text className="mb-2 text-sm font-medium text-gray-700">Filter by Transition Type</Text>
+              <ChartTypeSelector
+                currentType={selectedTransitionType || 'all'}
+                options={TRANSITION_TYPES.map(type => ({
+                  value: type.value || 'all',
+                  label: type.label
+                }))}
+                onSelect={(value) => setSelectedTransitionType(value === 'all' ? undefined : value)}
+              />
+            </View>
+          )}
 
-        {/* View Mode buttons */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4">
-          <View className="flex-row">
-            {VIEW_MODES.map((mode) => (
-              <TouchableOpacity
-                key={mode.label}
-                className={`mr-2 rounded-full px-4 py-2 ${
-                  viewMode === mode.value ? 'bg-blue-500' : 'bg-gray-100'
-                }`}
-                onPress={() => setViewMode(mode.value)}>
-                <Text
-                  className={viewMode === mode.value ? 'font-medium text-white' : 'text-gray-600'}>
-                  {mode.label}
-                </Text>
-              </TouchableOpacity>
+          {renderChart()}
+          {renderWeeklyBreakdown()}
+
+          {/* Monthly Statistics Cards */}
+          <View className="mt-6 mb-6">
+            <Text className="mb-4 text-lg font-bold text-gray-800">Monthly Statistics</Text>
+            {getStatisticsByMonth().map(({ month, statistics: monthStats }) => (
+              <MonthlyStatisticsGroup
+                key={month}
+                month={month}
+                statistics={monthStats}
+              />
             ))}
           </View>
-        </ScrollView>
-
-        {/* Filter buttons - only show in processing times mode */}
-        {viewMode === 'processing_times' && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-6">
-            <View className="flex-row">
-              {TRANSITION_TYPES.map((type) => (
-                <TouchableOpacity
-                  key={type.label}
-                  className={`mr-2 rounded-full px-4 py-2 ${
-                    selectedTransitionType === type.value ? 'bg-blue-500' : 'bg-gray-100'
-                  }`}
-                  onPress={() => setSelectedTransitionType(type.value)}>
-                  <Text
-                    className={
-                      selectedTransitionType === type.value
-                        ? 'font-medium text-white'
-                        : 'text-gray-600'
-                    }>
-                    {type.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </ScrollView>
-        )}
-
-        {loading ? (
-          <View className="items-center justify-center py-12">
-            <ActivityIndicator size="large" color="#0284c7" />
-            <Text className="mt-4 text-gray-500">Loading statistics...</Text>
-          </View>
-        ) : (
-          <Animated.View style={{ opacity: fadeAnim }}>
-            {statistics.length > 0 ? (
-              <>
-                {/* Main Chart */}
-                {renderChart()}
-
-                {/* Weekly Breakdown Chart (when a month is selected) */}
-                {renderWeeklyBreakdown()}
-
-                {/* Statistics cards grouped by month - only shown in processing times mode */}
-                {viewMode === 'processing_times' && (
-                  <View>
-                    {getStatisticsByMonth().map(({ month, statistics: monthStats }) => (
-                      <MonthlyStatisticsGroup key={month} month={month} statistics={monthStats} />
-                    ))}
-                  </View>
-                )}
-              </>
-            ) : (
-              <View className="items-center justify-center rounded-xl bg-white py-12">
-                <Ionicons name="bar-chart-outline" size={64} color="#94a3b8" />
-                <Text className="mt-4 text-center text-gray-500">
-                  No data available for the selected filters
-                </Text>
-                <Text className="mt-2 text-center text-sm text-gray-400">
-                  Try a different selection or check back later
-                </Text>
-              </View>
-            )}
-          </Animated.View>
-        )}
-      </View>
+        </Animated.View>
+      </ScrollView>
     </ScreenContent>
   );
 }
