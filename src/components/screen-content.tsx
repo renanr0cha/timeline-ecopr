@@ -30,7 +30,7 @@ export function ScreenContent({
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50">
+    <SafeAreaView className="flex-1 bg-[#FFF5F6]">
       {scrollable ? <ScrollView className="flex-1">{renderContent()}</ScrollView> : renderContent()}
     </SafeAreaView>
   );

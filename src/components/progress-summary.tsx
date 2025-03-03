@@ -72,7 +72,7 @@ export const ProgressSummary = ({ entries, onAddEntry, emptyState = false }: Pro
         case 'aor':
           return 'bg-blue-500';
         case 'p2':
-          return 'bg-purple-500';
+          return 'bg-maple-leaf';
         case 'ecopr':
           return 'bg-green-500';
         case 'pr_card':
@@ -102,7 +102,7 @@ export const ProgressSummary = ({ entries, onAddEntry, emptyState = false }: Pro
   };
 
   return (
-    <View className="mb-4 rounded-xl bg-white p-5 shadow-sm">
+    <View>
       <Text className="mb-4 text-xl font-bold text-gray-800">Your PR Journey</Text>
 
       {/* Progress bar */}

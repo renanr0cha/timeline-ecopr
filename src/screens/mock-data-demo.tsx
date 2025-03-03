@@ -328,7 +328,7 @@ export default function MockDataDemo() {
           key={option.value}
           onPress={() => onSelect(option.value)}
           className={`mx-1 px-3 py-1 rounded-full ${
-            currentType === option.value ? 'bg-purple-500' : 'bg-gray-200'
+            currentType === option.value ? 'bg-maple-leaf' : 'bg-gray-200'
           }`}
         >
           <Text className={`text-xs ${
@@ -389,7 +389,7 @@ export default function MockDataDemo() {
             }}
             className="rounded-b-xl bg-white shadow-sm"
           >
-            <TimelineView entries={sortedEntries.slice(0, 5)} />
+          <TimelineView entries={sortedEntries.slice(0, 5)} />
           </Animated.View>
         </View>
 
@@ -561,7 +561,7 @@ export default function MockDataDemo() {
                       key={stat.month_year}
                       onPress={() => handleMonthSelect(stat.month_year || '')}
                       className={`m-1 rounded-full px-3 py-1 ${
-                        selectedMonth === stat.month_year ? 'bg-purple-500' : 'bg-gray-200'
+                        selectedMonth === stat.month_year ? 'bg-maple-leaf' : 'bg-gray-200'
                       }`}>
                       <Text
                         className={`text-xs ${
@@ -569,7 +569,7 @@ export default function MockDataDemo() {
                         }`}>
                         {stat.month_year}
                       </Text>
-                    </TouchableOpacity>
+            </TouchableOpacity>
                   ))}
                 </View>
               </ScrollView>

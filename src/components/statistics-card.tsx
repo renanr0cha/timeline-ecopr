@@ -55,7 +55,7 @@ export const StatisticsCard = ({ statistic, hideMonth = false }: StatisticsCardP
       case 'aor-p2':
         return 'bg-blue-500';
       case 'p2-ecopr':
-        return 'bg-purple-500';
+        return 'bg-maple-leaf';
       case 'ecopr-pr_card':
         return 'bg-green-500';
       default:
@@ -70,7 +70,7 @@ export const StatisticsCard = ({ statistic, hideMonth = false }: StatisticsCardP
   });
 
   // Create separate styles for standalone vs grouped cards
-  const cardClasses = hideMonth ? 'p-4' : 'rounded-xl bg-white p-4 shadow-sm';
+  const cardClasses = hideMonth ? 'pt-2' : 'rounded-xl pt-2 bg-white shadow-sm';
 
   return (
     <Animated.View

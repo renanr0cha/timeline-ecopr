@@ -54,7 +54,7 @@ export const TimelineView = ({ entries, onEntryPress }: TimelineViewProps) => {
       case 'aor':
         return 'bg-blue-500';
       case 'p2':
-        return 'bg-purple-500';
+        return 'bg-maple-leaf';
       case 'ecopr':
         return 'bg-green-500';
       case 'pr_card':

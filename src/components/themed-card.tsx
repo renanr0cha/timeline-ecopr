@@ -17,7 +17,7 @@ export const ThemedCard: React.FC<ThemedCardProps> = ({
   className = '',
   ...props
 }) => {
-  const baseClasses = 'bg-snow-white rounded-lg overflow-hidden';
+  const baseClasses = 'bg-white rounded-lg overflow-hidden';
   
   const variantClasses = {
     default: 'border border-frost shadow-sm',
