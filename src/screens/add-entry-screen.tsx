@@ -41,17 +41,24 @@ const ENTRY_TYPE_OPTIONS: {
   description: string;
 }[] = [
   {
+    value: 'eligibility',
+    label: 'Eligibility',
+    icon: 'checkmark-circle-outline',
+    color: 'bg-indigo-500',
+    description: 'Eligibility verification',
+  },
+  {
     value: 'submission',
     label: 'Submission',
     icon: 'paper-plane-outline',
-    color: 'bg-indigo-500',
+    color: 'bg-purple-500',
     description: 'Application submission date',
   },
   {
     value: 'biometrics',
     label: 'Biometrics',
     icon: 'finger-print-outline',
-    color: 'bg-purple-500',
+    color: 'bg-teal-500',
     description: 'Biometrics completed',
   },
   {
@@ -59,28 +66,42 @@ const ENTRY_TYPE_OPTIONS: {
     label: 'AOR',
     icon: 'document-text-outline',
     color: 'bg-maple-red',
-    description: 'Acknowledgement of Receipt sent by IRCC',
+    description: 'Acknowledgement of Receipt',
   },
   {
     value: 'medicals',
     label: 'Medicals',
     icon: 'medical-outline',
-    color: 'bg-teal-500',
+    color: 'bg-blue-500',
     description: 'Medical examination passed',
+  },
+  {
+    value: 'background_check',
+    label: 'Background Check',
+    icon: 'shield-checkmark-outline',
+    color: 'bg-yellow-600',
+    description: 'Background check completed',
+  },
+  {
+    value: 'additional_docs',
+    label: 'Additional Docs',
+    icon: 'folder-open-outline',
+    color: 'bg-orange-500',
+    description: 'Additional documents submitted',
+  },
+  {
+    value: 'p1',
+    label: 'P1',
+    icon: 'person-outline',
+    color: 'bg-hope-red',
+    description: 'Principal applicant portal access',
   },
   {
     value: 'p2',
     label: 'P2',
-    icon: 'log-in-outline',
+    icon: 'people-outline',
     color: 'bg-hope-red',
-    description: 'Portal 2 login access granted',
-  },
-  {
-    value: 'bg_check',
-    label: 'Background Check',
-    icon: 'shield-checkmark-outline',
-    color: 'bg-blue-500',
-    description: 'Background check completed',
+    description: 'Secondary applicant portal access',
   },
   {
     value: 'ecopr',
@@ -93,15 +114,8 @@ const ENTRY_TYPE_OPTIONS: {
     value: 'copr',
     label: 'COPR',
     icon: 'document-outline',
-    color: 'bg-yellow-600',
+    color: 'bg-green-600',
     description: 'Confirmation of Permanent Residence',
-  },
-  {
-    value: 'landing',
-    label: 'Landing',
-    icon: 'airplane-outline',
-    color: 'bg-orange-500',
-    description: 'Official landing/border entry',
   },
   {
     value: 'pr_card',
@@ -116,15 +130,17 @@ const ENTRY_TYPE_OPTIONS: {
  * Get the milestone sequence for determining next steps
  */
 const MILESTONE_SEQUENCE: EntryType[] = [
+  'eligibility', 
   'submission', 
   'biometrics', 
   'aor', 
   'medicals', 
+  'background_check', 
+  'additional_docs',
+  'p1',
   'p2', 
-  'bg_check', 
   'ecopr', 
   'copr', 
-  'landing', 
   'pr_card'
 ];
 

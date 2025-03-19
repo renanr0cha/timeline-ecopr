@@ -15,15 +15,17 @@ interface TimelineViewProps {
 export const TimelineView = ({ entries, onEntryPress }: TimelineViewProps) => {
   // Define the fixed order of milestones in the journey - ordered from top to bottom
   const milestoneOrder: EntryType[] = [
+    'eligibility',
     'submission', 
     'biometrics', 
     'aor', 
     'medicals', 
+    'background_check', 
+    'additional_docs',
+    'p1',
     'p2', 
-    'bg_check', 
     'ecopr', 
     'copr', 
-    'landing', 
     'pr_card'
   ];
   
@@ -62,24 +64,28 @@ export const TimelineView = ({ entries, onEntryPress }: TimelineViewProps) => {
 
   const getEntryTypeColor = (entryType: string) => {
     switch (entryType) {
-      case 'submission':
+      case 'eligibility':
         return 'bg-indigo-500';
-      case 'biometrics':
+      case 'submission':
         return 'bg-purple-500';
+      case 'biometrics':
+        return 'bg-teal-500';
       case 'aor':
         return 'bg-maple-red';
       case 'medicals':
-        return 'bg-teal-500';
+        return 'bg-blue-500';
+      case 'background_check':
+        return 'bg-yellow-600';
+      case 'additional_docs':
+        return 'bg-orange-500';
+      case 'p1':
+        return 'bg-hope-red';
       case 'p2':
         return 'bg-hope-red';
-      case 'bg_check':
-        return 'bg-blue-500';
       case 'ecopr':
         return 'bg-success';
       case 'copr':
-        return 'bg-yellow-600';
-      case 'landing':
-        return 'bg-orange-500';
+        return 'bg-green-600';
       case 'pr_card':
         return 'bg-waiting';
       default:
@@ -89,6 +95,8 @@ export const TimelineView = ({ entries, onEntryPress }: TimelineViewProps) => {
 
   const getEntryTypeName = (entryType: string) => {
     switch (entryType) {
+      case 'eligibility':
+        return 'Eligibility';
       case 'submission':
         return 'Submission';
       case 'biometrics':
@@ -97,16 +105,18 @@ export const TimelineView = ({ entries, onEntryPress }: TimelineViewProps) => {
         return 'AOR';
       case 'medicals':
         return 'Medicals';
+      case 'background_check':
+        return 'Background Check';
+      case 'additional_docs':
+        return 'Additional Docs';
+      case 'p1':
+        return 'P1';
       case 'p2':
         return 'P2';
-      case 'bg_check':
-        return 'Background Check';
       case 'ecopr':
         return 'ecoPR';
       case 'copr':
         return 'COPR';
-      case 'landing':
-        return 'Landing';
       case 'pr_card':
         return 'PR Card';
       default:

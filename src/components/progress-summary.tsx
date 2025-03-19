@@ -17,15 +17,17 @@ interface ProgressSummaryProps {
 export const ProgressSummary = ({ entries, onAddEntry, emptyState = false }: ProgressSummaryProps) => {
   // Define the fixed order of milestones in the journey - ordered from top to bottom
   const milestones: EntryType[] = [
+    'eligibility',
     'submission', 
     'biometrics', 
     'aor', 
     'medicals', 
+    'background_check', 
+    'additional_docs',
+    'p1',
     'p2', 
-    'bg_check', 
     'ecopr', 
     'copr', 
-    'landing', 
     'pr_card'
   ];
 
@@ -62,6 +64,8 @@ export const ProgressSummary = ({ entries, onAddEntry, emptyState = false }: Pro
   // Get milestone display name
   const getMilestoneName = (milestone: EntryType): string => {
     switch (milestone) {
+      case 'eligibility':
+        return 'Eligibility';
       case 'submission':
         return 'Submission';
       case 'biometrics':
@@ -70,16 +74,18 @@ export const ProgressSummary = ({ entries, onAddEntry, emptyState = false }: Pro
         return 'AOR';
       case 'medicals':
         return 'Medicals';
+      case 'background_check':
+        return 'Background Check';
+      case 'additional_docs':
+        return 'Additional Docs';
+      case 'p1':
+        return 'P1';
       case 'p2':
         return 'P2';
-      case 'bg_check':
-        return 'Background Check';
       case 'ecopr':
         return 'ecoPR';
       case 'copr':
         return 'COPR';
-      case 'landing':
-        return 'Landing';
       case 'pr_card':
         return 'PR Card';
       default:
@@ -92,24 +98,28 @@ export const ProgressSummary = ({ entries, onAddEntry, emptyState = false }: Pro
     // If this milestone is completed, use its specific color
     if (index <= completedIndex) {
       switch (milestone) {
-        case 'submission':
+        case 'eligibility':
           return 'bg-indigo-500';
-        case 'biometrics':
+        case 'submission':
           return 'bg-purple-500';
+        case 'biometrics':
+          return 'bg-teal-500';
         case 'aor':
           return 'bg-maple-red';
         case 'medicals':
-          return 'bg-teal-500';
+          return 'bg-blue-500';
+        case 'background_check':
+          return 'bg-yellow-600';
+        case 'additional_docs':
+          return 'bg-orange-500';
+        case 'p1':
+          return 'bg-hope-red';
         case 'p2':
           return 'bg-hope-red';
-        case 'bg_check':
-          return 'bg-blue-500';
         case 'ecopr':
           return 'bg-success';
         case 'copr':
-          return 'bg-yellow-600';
-        case 'landing':
-          return 'bg-orange-500';
+          return 'bg-green-600';
         case 'pr_card':
           return 'bg-waiting';
         default:
@@ -202,16 +212,18 @@ export const ProgressSummary = ({ entries, onAddEntry, emptyState = false }: Pro
       <View className="mt-4 rounded-lg bg-gray-50 p-4">
         <Text className="text-center text-base text-gray-700">
           {completedIndex === -1 && 'Start tracking your PR journey!'}
-          {completedIndex === 0 && 'Application submitted! Complete biometrics next.'}
-          {completedIndex === 1 && 'Biometrics completed! Waiting for AOR.'}
-          {completedIndex === 2 && 'AOR received! Complete medical exam next.'}
-          {completedIndex === 3 && 'Medical exam passed! Waiting for P2 access.'}
-          {completedIndex === 4 && 'P2 access granted! Background check in progress.'}
-          {completedIndex === 5 && 'Background check completed! Waiting for ecoPR.'}
-          {completedIndex === 6 && 'ecoPR received! Waiting for COPR.'}
-          {completedIndex === 7 && 'COPR received! Ready for landing/POE.'}
-          {completedIndex === 8 && 'Successfully landed! Waiting for PR Card.'}
-          {completedIndex === 9 && "Congratulations! You've completed your PR journey."}
+          {completedIndex === 0 && 'Eligibility verified! Ready to submit your application.'}
+          {completedIndex === 1 && 'Application submitted! Complete biometrics next.'}
+          {completedIndex === 2 && 'Biometrics completed! Waiting for AOR.'}
+          {completedIndex === 3 && 'AOR received! Complete medical exam next.'}
+          {completedIndex === 4 && 'Medical exam passed! Background check in progress.'}
+          {completedIndex === 5 && 'Background check completed! Submit any additional documents.'}
+          {completedIndex === 6 && 'Additional documents submitted! Waiting for P1 portal access.'}
+          {completedIndex === 7 && 'P1 access granted! Waiting for P2 portal access.'}
+          {completedIndex === 8 && 'P2 access granted! Waiting for ecoPR.'}
+          {completedIndex === 9 && 'ecoPR received! Waiting for COPR.'}
+          {completedIndex === 10 && 'COPR received! Waiting for PR Card.'}
+          {completedIndex === 11 && "Congratulations! You've completed your PR journey."}
         </Text>
       </View>
     </View>
