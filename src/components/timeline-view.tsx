@@ -14,7 +14,18 @@ interface TimelineViewProps {
  */
 export const TimelineView = ({ entries, onEntryPress }: TimelineViewProps) => {
   // Define the fixed order of milestones in the journey - ordered from top to bottom
-  const milestoneOrder: EntryType[] = ['aor', 'p2', 'ecopr', 'pr_card'];
+  const milestoneOrder: EntryType[] = [
+    'submission', 
+    'biometrics', 
+    'aor', 
+    'medicals', 
+    'p2', 
+    'bg_check', 
+    'ecopr', 
+    'copr', 
+    'landing', 
+    'pr_card'
+  ];
   
   // Sort entries by the fixed milestone order, not by date
   const orderedEntries = [...entries].sort((a, b) => {
@@ -51,14 +62,26 @@ export const TimelineView = ({ entries, onEntryPress }: TimelineViewProps) => {
 
   const getEntryTypeColor = (entryType: string) => {
     switch (entryType) {
+      case 'submission':
+        return 'bg-indigo-500';
+      case 'biometrics':
+        return 'bg-purple-500';
       case 'aor':
-        return 'bg-blue-500';
+        return 'bg-maple-red';
+      case 'medicals':
+        return 'bg-teal-500';
       case 'p2':
-        return 'bg-maple-leaf';
+        return 'bg-hope-red';
+      case 'bg_check':
+        return 'bg-blue-500';
       case 'ecopr':
-        return 'bg-green-500';
+        return 'bg-success';
+      case 'copr':
+        return 'bg-yellow-600';
+      case 'landing':
+        return 'bg-orange-500';
       case 'pr_card':
-        return 'bg-amber-500';
+        return 'bg-waiting';
       default:
         return 'bg-gray-500';
     }
@@ -66,12 +89,24 @@ export const TimelineView = ({ entries, onEntryPress }: TimelineViewProps) => {
 
   const getEntryTypeName = (entryType: string) => {
     switch (entryType) {
+      case 'submission':
+        return 'Submission';
+      case 'biometrics':
+        return 'Biometrics';
       case 'aor':
         return 'AOR';
+      case 'medicals':
+        return 'Medicals';
       case 'p2':
         return 'P2';
+      case 'bg_check':
+        return 'Background Check';
       case 'ecopr':
         return 'ecoPR';
+      case 'copr':
+        return 'COPR';
+      case 'landing':
+        return 'Landing';
       case 'pr_card':
         return 'PR Card';
       default:

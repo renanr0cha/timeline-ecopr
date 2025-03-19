@@ -41,11 +41,32 @@ const ENTRY_TYPE_OPTIONS: {
   description: string;
 }[] = [
   {
+    value: 'submission',
+    label: 'Submission',
+    icon: 'paper-plane-outline',
+    color: 'bg-indigo-500',
+    description: 'Application submission date',
+  },
+  {
+    value: 'biometrics',
+    label: 'Biometrics',
+    icon: 'finger-print-outline',
+    color: 'bg-purple-500',
+    description: 'Biometrics completed',
+  },
+  {
     value: 'aor',
     label: 'AOR',
     icon: 'document-text-outline',
     color: 'bg-maple-red',
     description: 'Acknowledgement of Receipt sent by IRCC',
+  },
+  {
+    value: 'medicals',
+    label: 'Medicals',
+    icon: 'medical-outline',
+    color: 'bg-teal-500',
+    description: 'Medical examination passed',
   },
   {
     value: 'p2',
@@ -55,11 +76,32 @@ const ENTRY_TYPE_OPTIONS: {
     description: 'Portal 2 login access granted',
   },
   {
+    value: 'bg_check',
+    label: 'Background Check',
+    icon: 'shield-checkmark-outline',
+    color: 'bg-blue-500',
+    description: 'Background check completed',
+  },
+  {
     value: 'ecopr',
     label: 'ecoPR',
     icon: 'mail-outline',
     color: 'bg-success',
     description: 'Electronic Confirmation of PR',
+  },
+  {
+    value: 'copr',
+    label: 'COPR',
+    icon: 'document-outline',
+    color: 'bg-yellow-600',
+    description: 'Confirmation of Permanent Residence',
+  },
+  {
+    value: 'landing',
+    label: 'Landing',
+    icon: 'airplane-outline',
+    color: 'bg-orange-500',
+    description: 'Official landing/border entry',
   },
   {
     value: 'pr_card',
@@ -73,7 +115,18 @@ const ENTRY_TYPE_OPTIONS: {
 /**
  * Get the milestone sequence for determining next steps
  */
-const MILESTONE_SEQUENCE: EntryType[] = ['aor', 'p2', 'ecopr', 'pr_card'];
+const MILESTONE_SEQUENCE: EntryType[] = [
+  'submission', 
+  'biometrics', 
+  'aor', 
+  'medicals', 
+  'p2', 
+  'bg_check', 
+  'ecopr', 
+  'copr', 
+  'landing', 
+  'pr_card'
+];
 
 /**
  * Screen for adding or editing a timeline entry

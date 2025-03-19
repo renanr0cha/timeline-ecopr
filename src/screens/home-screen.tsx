@@ -3,12 +3,12 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Animated,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Animated,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 import { ProgressSummary } from '../components/progress-summary';
@@ -110,7 +110,18 @@ export default function HomeScreen({ route }: HomeScreenProps) {
         loadEntries(); // Reload entries after adding
         
         // Determine the next step to prompt for
-        const milestones: EntryType[] = ['aor', 'p2', 'ecopr', 'pr_card'];
+        const milestones: EntryType[] = [
+          'submission', 
+          'biometrics', 
+          'aor', 
+          'medicals', 
+          'p2', 
+          'bg_check', 
+          'ecopr', 
+          'copr', 
+          'landing', 
+          'pr_card'
+        ];
         const currentIndex = milestones.findIndex(m => m === entryType);
         
         if (currentIndex < milestones.length - 1) {

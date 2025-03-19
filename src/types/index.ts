@@ -9,7 +9,17 @@ export * from './errors';
 /**
  * Entry types for timeline entries
  */
-export type EntryType = 'aor' | 'p2' | 'ecopr' | 'pr_card';
+export type EntryType = 
+  | 'submission'
+  | 'biometrics'
+  | 'aor' 
+  | 'medicals'
+  | 'p2' 
+  | 'bg_check'
+  | 'ecopr' 
+  | 'copr'
+  | 'landing'
+  | 'pr_card';
 
 /**
  * Timeline entry data structure

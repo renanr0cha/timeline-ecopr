@@ -16,7 +16,18 @@ interface ProgressSummaryProps {
  */
 export const ProgressSummary = ({ entries, onAddEntry, emptyState = false }: ProgressSummaryProps) => {
   // Define the fixed order of milestones in the journey - ordered from top to bottom
-  const milestones: EntryType[] = ['aor', 'p2', 'ecopr', 'pr_card'];
+  const milestones: EntryType[] = [
+    'submission', 
+    'biometrics', 
+    'aor', 
+    'medicals', 
+    'p2', 
+    'bg_check', 
+    'ecopr', 
+    'copr', 
+    'landing', 
+    'pr_card'
+  ];
 
   // Find the latest milestone achieved
   const getCompletedMilestoneIndex = (): number => {
@@ -51,12 +62,24 @@ export const ProgressSummary = ({ entries, onAddEntry, emptyState = false }: Pro
   // Get milestone display name
   const getMilestoneName = (milestone: EntryType): string => {
     switch (milestone) {
+      case 'submission':
+        return 'Submission';
+      case 'biometrics':
+        return 'Biometrics';
       case 'aor':
         return 'AOR';
+      case 'medicals':
+        return 'Medicals';
       case 'p2':
         return 'P2';
+      case 'bg_check':
+        return 'Background Check';
       case 'ecopr':
         return 'ecoPR';
+      case 'copr':
+        return 'COPR';
+      case 'landing':
+        return 'Landing';
       case 'pr_card':
         return 'PR Card';
       default:
@@ -69,14 +92,26 @@ export const ProgressSummary = ({ entries, onAddEntry, emptyState = false }: Pro
     // If this milestone is completed, use its specific color
     if (index <= completedIndex) {
       switch (milestone) {
+        case 'submission':
+          return 'bg-indigo-500';
+        case 'biometrics':
+          return 'bg-purple-500';
         case 'aor':
-          return 'bg-blue-500';
+          return 'bg-maple-red';
+        case 'medicals':
+          return 'bg-teal-500';
         case 'p2':
-          return 'bg-maple-leaf';
+          return 'bg-hope-red';
+        case 'bg_check':
+          return 'bg-blue-500';
         case 'ecopr':
-          return 'bg-green-500';
+          return 'bg-success';
+        case 'copr':
+          return 'bg-yellow-600';
+        case 'landing':
+          return 'bg-orange-500';
         case 'pr_card':
-          return 'bg-amber-500';
+          return 'bg-waiting';
         default:
           return 'bg-gray-500';
       }
@@ -167,10 +202,16 @@ export const ProgressSummary = ({ entries, onAddEntry, emptyState = false }: Pro
       <View className="mt-4 rounded-lg bg-gray-50 p-4">
         <Text className="text-center text-base text-gray-700">
           {completedIndex === -1 && 'Start tracking your PR journey!'}
-          {completedIndex === 0 && 'AOR received! Waiting for P2 access.'}
-          {completedIndex === 1 && 'P2 access granted! Waiting for ecoPR.'}
-          {completedIndex === 2 && 'ecoPR received! Waiting for PR Card.'}
-          {completedIndex === 3 && "Congratulations! You've completed your PR journey."}
+          {completedIndex === 0 && 'Application submitted! Complete biometrics next.'}
+          {completedIndex === 1 && 'Biometrics completed! Waiting for AOR.'}
+          {completedIndex === 2 && 'AOR received! Complete medical exam next.'}
+          {completedIndex === 3 && 'Medical exam passed! Waiting for P2 access.'}
+          {completedIndex === 4 && 'P2 access granted! Background check in progress.'}
+          {completedIndex === 5 && 'Background check completed! Waiting for ecoPR.'}
+          {completedIndex === 6 && 'ecoPR received! Waiting for COPR.'}
+          {completedIndex === 7 && 'COPR received! Ready for landing/POE.'}
+          {completedIndex === 8 && 'Successfully landed! Waiting for PR Card.'}
+          {completedIndex === 9 && "Congratulations! You've completed your PR journey."}
         </Text>
       </View>
     </View>
