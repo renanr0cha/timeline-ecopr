@@ -17,21 +17,22 @@ interface ProgressSummaryProps {
 export const ProgressSummary = ({ entries, onAddEntry, emptyState = false }: ProgressSummaryProps) => {
   // Define the fixed order of milestones in the journey - ordered from top to bottom
   const milestones: EntryType[] = [
-    'eligibility',
     'submission', 
-    'biometrics', 
     'aor', 
-    'medicals', 
-    'background_check', 
-    'additional_docs',
+    'biometrics_request',
+    'biometrics_complete',
+    'medicals_request',
+    'medicals_complete',
+    'background_start',
+    'background_complete',
+    // additional_docs is optional and not included by default
     'p1',
     'p2', 
     'ecopr', 
-    'copr', 
     'pr_card'
   ];
 
-  // Find the latest milestone achieved
+  // Get the latest milestone stage achieved
   const getCompletedMilestoneIndex = (): number => {
     let completedIndex = -1;
 
@@ -64,18 +65,22 @@ export const ProgressSummary = ({ entries, onAddEntry, emptyState = false }: Pro
   // Get milestone display name
   const getMilestoneName = (milestone: EntryType): string => {
     switch (milestone) {
-      case 'eligibility':
-        return 'Eligibility';
       case 'submission':
         return 'Submission';
-      case 'biometrics':
-        return 'Biometrics';
       case 'aor':
         return 'AOR';
-      case 'medicals':
-        return 'Medicals';
-      case 'background_check':
+      case 'biometrics_request':
+        return 'Biometrics Request';
+      case 'biometrics_complete':
+        return 'Biometrics Complete';
+      case 'medicals_request':
+        return 'Medicals Request';
+      case 'medicals_complete':
+        return 'Medicals Complete';
+      case 'background_start':
         return 'Background Check';
+      case 'background_complete':
+        return 'Background Cleared';
       case 'additional_docs':
         return 'Additional Docs';
       case 'p1':
@@ -84,8 +89,6 @@ export const ProgressSummary = ({ entries, onAddEntry, emptyState = false }: Pro
         return 'P2';
       case 'ecopr':
         return 'ecoPR';
-      case 'copr':
-        return 'COPR';
       case 'pr_card':
         return 'PR Card';
       default:
@@ -98,17 +101,21 @@ export const ProgressSummary = ({ entries, onAddEntry, emptyState = false }: Pro
     // If this milestone is completed, use its specific color
     if (index <= completedIndex) {
       switch (milestone) {
-        case 'eligibility':
-          return 'bg-indigo-500';
         case 'submission':
           return 'bg-purple-500';
-        case 'biometrics':
-          return 'bg-teal-500';
         case 'aor':
           return 'bg-maple-red';
-        case 'medicals':
+        case 'biometrics_request':
+          return 'bg-teal-500';
+        case 'biometrics_complete':
+          return 'bg-teal-600';
+        case 'medicals_request':
           return 'bg-blue-500';
-        case 'background_check':
+        case 'medicals_complete':
+          return 'bg-blue-600';
+        case 'background_start':
+          return 'bg-yellow-500';
+        case 'background_complete':
           return 'bg-yellow-600';
         case 'additional_docs':
           return 'bg-orange-500';
@@ -118,8 +125,6 @@ export const ProgressSummary = ({ entries, onAddEntry, emptyState = false }: Pro
           return 'bg-hope-red';
         case 'ecopr':
           return 'bg-success';
-        case 'copr':
-          return 'bg-green-600';
         case 'pr_card':
           return 'bg-waiting';
         default:
@@ -131,6 +136,23 @@ export const ProgressSummary = ({ entries, onAddEntry, emptyState = false }: Pro
     return 'bg-gray-300';
   };
 
+  // Check if a milestone is a completion stage for a two-stage process
+  const isCompletionStage = (milestone: EntryType): boolean => {
+    return [
+      'biometrics_complete', 
+      'medicals_complete', 
+      'background_complete'
+    ].includes(milestone);
+  };
+
+  // Check if the previous stage has been completed for a completion stage
+  const isPreviousStageComplete = (milestone: EntryType, index: number): boolean => {
+    if (!isCompletionStage(milestone)) return true;
+    
+    const previousStageMilestone = milestone.replace('_complete', '_request');
+    return entries.some(entry => entry.entry_type === previousStageMilestone);
+  };
+
   // Determine the next milestone that should be added
   const getNextMilestone = (): EntryType | null => {
     const nextIndex = completedIndex + 1;
@@ -138,8 +160,14 @@ export const ProgressSummary = ({ entries, onAddEntry, emptyState = false }: Pro
   };
 
   // Check if we should show the add button for a specific milestone
-  const shouldShowAddButton = (index: number): boolean => {
+  const shouldShowAddButton = (index: number, milestone: EntryType): boolean => {
     if (!onAddEntry) return false;
+
+    // Special handling for two-stage milestones
+    if (isCompletionStage(milestone)) {
+      return isPreviousStageComplete(milestone, index) && 
+             !entries.some(entry => entry.entry_type === milestone);
+    }
 
     // Show the add button for the next milestone or the first milestone if none exist
     if (emptyState && index === 0) return true;
@@ -157,72 +185,79 @@ export const ProgressSummary = ({ entries, onAddEntry, emptyState = false }: Pro
 
       {/* Milestone display - vertical layout from top to bottom */}
       <View className="mb-2">
-        {milestones.map((milestone, index) => (
-          <View key={milestone} className="relative">
-            {/* Milestone row */}
-            <View className="mb-6 flex-row items-center">
-              {/* Milestone circle */}
-              <View
-                className={`z-10 mr-4 h-9 w-9 items-center justify-center rounded-full ${getMilestoneColor(
-                  milestone,
-                  index
-                )}`}>
-                {index <= completedIndex && <Text className="text-sm font-bold text-white">✓</Text>}
-              </View>
-              
-              {/* Milestone content */}
-              <View className="flex-1 flex-row items-center justify-between">
-                <View>
-                  <Text className="text-base font-medium text-gray-700">
-                    {getMilestoneName(milestone)}
-                  </Text>
+        {milestones.map((milestone, index) => {
+          // Skip completion stages if the request stage hasn't been completed
+          if (isCompletionStage(milestone) && !isPreviousStageComplete(milestone, index)) {
+            return null;
+          }
 
-                  {getMilestoneDate(milestone) ? (
-                    <Text className="text-sm text-gray-500">
-                      {getMilestoneDate(milestone)}
+          return (
+            <View key={milestone} className="relative">
+              {/* Milestone row */}
+              <View className="mb-6 flex-row items-center">
+                {/* Milestone circle */}
+                <View
+                  className={`z-10 mr-4 h-9 w-9 items-center justify-center rounded-full ${getMilestoneColor(
+                    milestone,
+                    index
+                  )}`}>
+                  {index <= completedIndex && <Text className="text-sm font-bold text-white">✓</Text>}
+                </View>
+                
+                {/* Milestone content */}
+                <View className="flex-1 flex-row items-center justify-between">
+                  <View>
+                    <Text className="text-base font-medium text-gray-700">
+                      {getMilestoneName(milestone)}
                     </Text>
-                  ) : (
-                    <Text className="text-sm text-gray-400">
-                      {index <= completedIndex ? 'Completed' : 'Pending'}
-                    </Text>
+
+                    {getMilestoneDate(milestone) ? (
+                      <Text className="text-sm text-gray-500">
+                        {getMilestoneDate(milestone)}
+                      </Text>
+                    ) : (
+                      <Text className="text-sm text-gray-400">
+                        {index <= completedIndex ? 'Completed' : 'Pending'}
+                      </Text>
+                    )}
+                  </View>
+
+                  {/* Add button for the next milestone */}
+                  {shouldShowAddButton(index, milestone) && (
+                    <TouchableOpacity
+                      onPress={() => onAddEntry?.(milestone)}
+                      className="flex-row items-center rounded-full bg-blue-100 px-4 py-2">
+                      <Ionicons name="add-circle-outline" size={20} color="#3b82f6" />
+                      <Text className="ml-1 font-medium text-blue-500">Add</Text>
+                    </TouchableOpacity>
                   )}
                 </View>
-
-                {/* Add button for the next milestone */}
-                {shouldShowAddButton(index) && (
-                  <TouchableOpacity
-                    onPress={() => onAddEntry?.(milestone)}
-                    className="flex-row items-center rounded-full bg-blue-100 px-4 py-2">
-                    <Ionicons name="add-circle-outline" size={20} color="#3b82f6" />
-                    <Text className="ml-1 font-medium text-blue-500">Add</Text>
-                  </TouchableOpacity>
-                )}
               </View>
+              
+              {/* Connect milestones with a vertical line, except for the last one */}
+              {index < milestones.length - 1 && (
+                <View className="absolute left-[14px] top-[38px] -z-0 h-6 w-[3px] bg-gray-300" />
+              )}
             </View>
-            
-            {/* Connect milestones with a vertical line, except for the last one */}
-            {index < milestones.length - 1 && (
-              <View className="absolute left-[14px] top-[38px] -z-0 h-6 w-[3px] bg-gray-300" />
-            )}
-          </View>
-        ))}
+          );
+        })}
       </View>
 
       {/* Journey status */}
       <View className="mt-4 rounded-lg bg-gray-50 p-4">
         <Text className="text-center text-base text-gray-700">
           {completedIndex === -1 && 'Start tracking your PR journey!'}
-          {completedIndex === 0 && 'Eligibility verified! Ready to submit your application.'}
-          {completedIndex === 1 && 'Application submitted! Complete biometrics next.'}
-          {completedIndex === 2 && 'Biometrics completed! Waiting for AOR.'}
-          {completedIndex === 3 && 'AOR received! Complete medical exam next.'}
-          {completedIndex === 4 && 'Medical exam passed! Background check in progress.'}
-          {completedIndex === 5 && 'Background check completed! Submit any additional documents.'}
-          {completedIndex === 6 && 'Additional documents submitted! Waiting for P1 portal access.'}
-          {completedIndex === 7 && 'P1 access granted! Waiting for P2 portal access.'}
-          {completedIndex === 8 && 'P2 access granted! Waiting for ecoPR.'}
-          {completedIndex === 9 && 'ecoPR received! Waiting for COPR.'}
-          {completedIndex === 10 && 'COPR received! Waiting for PR Card.'}
+          {completedIndex === 0 && 'Application submitted! Waiting for AOR.'}
+          {completedIndex === 1 && 'AOR received! Waiting for biometrics request.'}
+          {completedIndex === 2 && 'Biometrics requested! Schedule your appointment.'}
+          {completedIndex === 3 && 'Biometrics completed! Waiting for medical exam request.'}
+          {completedIndex === 4 && 'Medical exam requested! Schedule your appointment.'}
+          {completedIndex === 5 && 'Medical exam passed! Waiting for background check.'}
+          {completedIndex === 6 && 'Background check started! Waiting for clearance.'}
+          {completedIndex === 7 && 'Background check cleared! Waiting for portal access.'}
+          {completedIndex === 8 && 'P1 access granted! Waiting for P2 portal access.'}
+          {completedIndex === 9 && 'P2 access granted! Waiting for ecoPR.'}
+          {completedIndex === 10 && 'ecoPR received! Waiting for PR Card.'}
           {completedIndex === 11 && "Congratulations! You've completed your PR journey."}
         </Text>
       </View>

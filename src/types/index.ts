@@ -10,17 +10,18 @@ export * from './errors';
  * Entry types for timeline entries
  */
 export type EntryType = 
-  | 'eligibility'
   | 'submission'
-  | 'biometrics'
   | 'aor' 
-  | 'medicals'
-  | 'background_check'
+  | 'biometrics_request'
+  | 'biometrics_complete'
+  | 'medicals_request'
+  | 'medicals_complete'
+  | 'background_start'
+  | 'background_complete'
   | 'additional_docs'
   | 'p1'
   | 'p2' 
   | 'ecopr' 
-  | 'copr'
   | 'pr_card';
 
 /**

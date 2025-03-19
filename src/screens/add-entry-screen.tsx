@@ -41,25 +41,11 @@ const ENTRY_TYPE_OPTIONS: {
   description: string;
 }[] = [
   {
-    value: 'eligibility',
-    label: 'Eligibility',
-    icon: 'checkmark-circle-outline',
-    color: 'bg-indigo-500',
-    description: 'Eligibility verification',
-  },
-  {
     value: 'submission',
     label: 'Submission',
     icon: 'paper-plane-outline',
     color: 'bg-purple-500',
     description: 'Application submission date',
-  },
-  {
-    value: 'biometrics',
-    label: 'Biometrics',
-    icon: 'finger-print-outline',
-    color: 'bg-teal-500',
-    description: 'Biometrics completed',
   },
   {
     value: 'aor',
@@ -69,15 +55,43 @@ const ENTRY_TYPE_OPTIONS: {
     description: 'Acknowledgement of Receipt',
   },
   {
-    value: 'medicals',
-    label: 'Medicals',
+    value: 'biometrics_request',
+    label: 'Biometrics Request',
+    icon: 'finger-print-outline',
+    color: 'bg-teal-500',
+    description: 'Biometrics request received',
+  },
+  {
+    value: 'biometrics_complete',
+    label: 'Biometrics Complete',
+    icon: 'checkmark-circle-outline',
+    color: 'bg-teal-600',
+    description: 'Biometrics appointment completed',
+  },
+  {
+    value: 'medicals_request',
+    label: 'Medicals Request',
     icon: 'medical-outline',
     color: 'bg-blue-500',
+    description: 'Medical examination request',
+  },
+  {
+    value: 'medicals_complete',
+    label: 'Medicals Complete',
+    icon: 'medkit-outline',
+    color: 'bg-blue-600',
     description: 'Medical examination passed',
   },
   {
-    value: 'background_check',
+    value: 'background_start',
     label: 'Background Check',
+    icon: 'shield-outline',
+    color: 'bg-yellow-500',
+    description: 'Background check started',
+  },
+  {
+    value: 'background_complete',
+    label: 'Background Cleared',
     icon: 'shield-checkmark-outline',
     color: 'bg-yellow-600',
     description: 'Background check completed',
@@ -111,13 +125,6 @@ const ENTRY_TYPE_OPTIONS: {
     description: 'Electronic Confirmation of PR',
   },
   {
-    value: 'copr',
-    label: 'COPR',
-    icon: 'document-outline',
-    color: 'bg-green-600',
-    description: 'Confirmation of Permanent Residence',
-  },
-  {
     value: 'pr_card',
     label: 'PR Card',
     icon: 'card-outline',
@@ -130,17 +137,17 @@ const ENTRY_TYPE_OPTIONS: {
  * Get the milestone sequence for determining next steps
  */
 const MILESTONE_SEQUENCE: EntryType[] = [
-  'eligibility', 
   'submission', 
-  'biometrics', 
   'aor', 
-  'medicals', 
-  'background_check', 
-  'additional_docs',
+  'biometrics_request',
+  'biometrics_complete',
+  'medicals_request',
+  'medicals_complete',
+  'background_start',
+  'background_complete',
   'p1',
   'p2', 
   'ecopr', 
-  'copr', 
   'pr_card'
 ];
 
@@ -510,14 +517,16 @@ export default function AddEntryScreen({ route }: AddEntryScreenProps) {
               <View className="bg-white rounded-t-xl p-4">
                 <View className="flex-row justify-between items-center mb-4">
                   <ThemedButton 
-                    variant="text" 
+                    variant="secondary" 
+                    size="sm"
                     onPress={() => setShowDatePicker(false)}
                   >
                     Cancel
                   </ThemedButton>
                   <Text className="text-lg font-medium">Select Date</Text>
                   <ThemedButton 
-                    variant="text" 
+                    variant="primary" 
+                    size="sm"
                     onPress={() => {
                       setShowDatePicker(false);
                     }}

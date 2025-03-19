@@ -111,17 +111,17 @@ export default function HomeScreen({ route }: HomeScreenProps) {
         
         // Determine the next step to prompt for
         const milestones: EntryType[] = [
-          'eligibility',
           'submission', 
-          'biometrics', 
           'aor', 
-          'medicals', 
-          'background_check', 
-          'additional_docs',
+          'biometrics_request',
+          'biometrics_complete',
+          'medicals_request',
+          'medicals_complete',
+          'background_start',
+          'background_complete',
           'p1',
           'p2', 
           'ecopr', 
-          'copr', 
           'pr_card'
         ];
         const currentIndex = milestones.findIndex(m => m === entryType);

@@ -15,22 +15,28 @@ interface TimelineViewProps {
 export const TimelineView = ({ entries, onEntryPress }: TimelineViewProps) => {
   // Define the fixed order of milestones in the journey - ordered from top to bottom
   const milestoneOrder: EntryType[] = [
-    'eligibility',
     'submission', 
-    'biometrics', 
     'aor', 
-    'medicals', 
-    'background_check', 
-    'additional_docs',
+    'biometrics_request',
+    'biometrics_complete',
+    'medicals_request',
+    'medicals_complete',
+    'background_start',
+    'background_complete',
+    'additional_docs', // Optional step, but included in ordering
     'p1',
     'p2', 
     'ecopr', 
-    'copr', 
     'pr_card'
   ];
   
+  // Filter entries to remove optional steps that don't have entries
+  const filteredEntries = entries.filter(
+    entry => entry.entry_type !== 'additional_docs' || entries.some(e => e.entry_type === 'additional_docs')
+  );
+  
   // Sort entries by the fixed milestone order, not by date
-  const orderedEntries = [...entries].sort((a, b) => {
+  const orderedEntries = [...filteredEntries].sort((a, b) => {
     const orderA = milestoneOrder.indexOf(a.entry_type);
     const orderB = milestoneOrder.indexOf(b.entry_type);
     return orderA - orderB;
@@ -64,17 +70,21 @@ export const TimelineView = ({ entries, onEntryPress }: TimelineViewProps) => {
 
   const getEntryTypeColor = (entryType: string) => {
     switch (entryType) {
-      case 'eligibility':
-        return 'bg-indigo-500';
       case 'submission':
         return 'bg-purple-500';
-      case 'biometrics':
-        return 'bg-teal-500';
       case 'aor':
         return 'bg-maple-red';
-      case 'medicals':
+      case 'biometrics_request':
+        return 'bg-teal-500';
+      case 'biometrics_complete':
+        return 'bg-teal-600';
+      case 'medicals_request':
         return 'bg-blue-500';
-      case 'background_check':
+      case 'medicals_complete':
+        return 'bg-blue-600';
+      case 'background_start':
+        return 'bg-yellow-500';
+      case 'background_complete':
         return 'bg-yellow-600';
       case 'additional_docs':
         return 'bg-orange-500';
@@ -84,8 +94,6 @@ export const TimelineView = ({ entries, onEntryPress }: TimelineViewProps) => {
         return 'bg-hope-red';
       case 'ecopr':
         return 'bg-success';
-      case 'copr':
-        return 'bg-green-600';
       case 'pr_card':
         return 'bg-waiting';
       default:
@@ -95,18 +103,22 @@ export const TimelineView = ({ entries, onEntryPress }: TimelineViewProps) => {
 
   const getEntryTypeName = (entryType: string) => {
     switch (entryType) {
-      case 'eligibility':
-        return 'Eligibility';
       case 'submission':
         return 'Submission';
-      case 'biometrics':
-        return 'Biometrics';
       case 'aor':
         return 'AOR';
-      case 'medicals':
-        return 'Medicals';
-      case 'background_check':
+      case 'biometrics_request':
+        return 'Biometrics Request';
+      case 'biometrics_complete':
+        return 'Biometrics Complete';
+      case 'medicals_request':
+        return 'Medicals Request';
+      case 'medicals_complete':
+        return 'Medicals Complete';
+      case 'background_start':
         return 'Background Check';
+      case 'background_complete':
+        return 'Background Cleared';
       case 'additional_docs':
         return 'Additional Docs';
       case 'p1':
@@ -115,8 +127,6 @@ export const TimelineView = ({ entries, onEntryPress }: TimelineViewProps) => {
         return 'P2';
       case 'ecopr':
         return 'ecoPR';
-      case 'copr':
-        return 'COPR';
       case 'pr_card':
         return 'PR Card';
       default:
