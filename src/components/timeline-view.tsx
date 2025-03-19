@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 
@@ -7,6 +8,23 @@ interface TimelineViewProps {
   entries: TimelineEntry[];
   onEntryPress?: (entry: TimelineEntry) => void;
 }
+
+// Map entry types to their icon names
+const ENTRY_TYPE_ICONS: Record<EntryType, string> = {
+  'submission': 'paper-plane-outline',
+  'aor': 'document-text-outline',
+  'biometrics_request': 'finger-print-outline',
+  'biometrics_complete': 'checkmark-circle-outline',
+  'medicals_request': 'medical-outline',
+  'medicals_complete': 'medkit-outline',
+  'background_start': 'shield-outline',
+  'background_complete': 'shield-checkmark-outline',
+  'additional_docs': 'folder-open-outline',
+  'p1': 'person-outline',
+  'p2': 'people-outline',
+  'ecopr': 'mail-outline',
+  'pr_card': 'card-outline'
+};
 
 /**
  * Timeline component that displays entries in a vertically connected timeline
@@ -160,9 +178,19 @@ export const TimelineView = ({ entries, onEntryPress }: TimelineViewProps) => {
             className="relative">
             {/* Timeline row */}
             <View className="mb-4 flex-row">
-              {/* Timeline line and dot */}
-              <View className="z-10 mr-4 items-center" style={{ width: 24 }}>
-                <View className={`h-4 w-4 rounded-full ${getEntryTypeColor(entry.entry_type)}`} />
+              {/* Timeline line and dot with icon */}
+              <View className="z-10 mr-4 items-center" style={{ width: 32 }}>
+                <View className={`h-8 w-8 items-center justify-center rounded-full ${getEntryTypeColor(entry.entry_type)}`}>
+                  <Ionicons 
+                    name={ENTRY_TYPE_ICONS[entry.entry_type as EntryType] as any} 
+                    size={16} 
+                    color="#FFFFFF" 
+                  />
+                  {/* Small checkmark badge for completed items */}
+                  <View className="absolute -right-1 -bottom-1 h-4 w-4 items-center justify-center rounded-full bg-success">
+                    <Ionicons name="checkmark" size={12} color="#FFFFFF" />
+                  </View>
+                </View>
               </View>
 
               {/* Content */}
@@ -185,7 +213,7 @@ export const TimelineView = ({ entries, onEntryPress }: TimelineViewProps) => {
             {/* Connecting line to next milestone (except for the last one) */}
             {index !== orderedEntries.length - 1 && (
               <View 
-                className="absolute left-3 top-4 -z-0 w-0.5 bg-gray-300" 
+                className="absolute left-4 top-8 -z-0 w-0.5 bg-gray-300" 
                 style={{ height: 60 }} 
               />
             )}

@@ -10,6 +10,23 @@ interface ProgressSummaryProps {
   emptyState?: boolean;
 }
 
+// Map entry types to their icon names
+const ENTRY_TYPE_ICONS: Record<EntryType, string> = {
+  'submission': 'paper-plane-outline',
+  'aor': 'document-text-outline',
+  'biometrics_request': 'finger-print-outline',
+  'biometrics_complete': 'checkmark-circle-outline',
+  'medicals_request': 'medical-outline',
+  'medicals_complete': 'medkit-outline',
+  'background_start': 'shield-outline',
+  'background_complete': 'shield-checkmark-outline',
+  'additional_docs': 'folder-open-outline',
+  'p1': 'person-outline',
+  'p2': 'people-outline',
+  'ecopr': 'mail-outline',
+  'pr_card': 'card-outline'
+};
+
 /**
  * Progress summary component that displays a visual representation of the user's journey
  * Shows a progress bar with completed and pending milestones
@@ -195,13 +212,24 @@ export const ProgressSummary = ({ entries, onAddEntry, emptyState = false }: Pro
             <View key={milestone} className="relative">
               {/* Milestone row */}
               <View className="mb-6 flex-row items-center">
-                {/* Milestone circle */}
+                {/* Milestone circle with icon */}
                 <View
-                  className={`z-10 mr-4 h-9 w-9 items-center justify-center rounded-full ${getMilestoneColor(
+                  className={`z-10 mr-4 h-10 w-10 items-center justify-center rounded-full ${getMilestoneColor(
                     milestone,
                     index
                   )}`}>
-                  {index <= completedIndex && <Text className="text-sm font-bold text-white">✓</Text>}
+                  <Ionicons
+                    name={ENTRY_TYPE_ICONS[milestone]}
+                    size={18}
+                    color="#FFFFFF"
+                  />
+                  
+                  {/* Checkmark badge for completed milestones */}
+                  {index <= completedIndex && (
+                    <View className="absolute -right-1 -bottom-1 h-5 w-5 items-center justify-center rounded-full bg-success">
+                      <Ionicons name="checkmark" size={12} color="#FFFFFF" />
+                    </View>
+                  )}
                 </View>
                 
                 {/* Milestone content */}
@@ -236,7 +264,7 @@ export const ProgressSummary = ({ entries, onAddEntry, emptyState = false }: Pro
               
               {/* Connect milestones with a vertical line, except for the last one */}
               {index < milestones.length - 1 && (
-                <View className="absolute left-[14px] top-[38px] -z-0 h-6 w-[3px] bg-gray-300" />
+                <View className="absolute left-5 top-10 -z-0 h-8 w-[2px] bg-gray-300" />
               )}
             </View>
           );
