@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
+// Import DateTimePicker but provide a fallback for Expo Go
+// import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Animated, Easing, Platform, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Animated, Easing, Modal, Text, TouchableOpacity, View } from 'react-native';
 import { MaskedTextInput } from 'react-native-mask-text';
 
 import { ScreenContent } from '../components/screen-content';
@@ -212,15 +213,17 @@ export default function AddEntryScreen({ route }: AddEntryScreenProps) {
     }
   };
 
-  /**
-   * Handle date selection from date picker
-   */
+  // Updated to work with our custom date picker
   const handleDateChange = (event: any, selectedDate?: Date) => {
-    setShowDatePicker(Platform.OS === 'ios');
+    setShowDatePicker(false);
     if (selectedDate) {
       setDate(selectedDate);
       setDateText(formatDate(selectedDate));
     }
+  };
+  
+  const handleCalendarPress = () => {
+    setShowDatePicker(true);
   };
 
   /**
@@ -275,6 +278,19 @@ export default function AddEntryScreen({ route }: AddEntryScreenProps) {
   const getEntryTypeColor = (type: EntryType): string => {
     const option = ENTRY_TYPE_OPTIONS.find((opt) => opt.value === type);
     return option?.color || 'bg-gray-500';
+  };
+
+  // Helper function to generate date picker options
+  const generateDateOptions = () => {
+    const today = new Date();
+    const years = Array.from({ length: 5 }, (_, i) => today.getFullYear() - 2 + i);
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    const days = Array.from({ length: 31 }, (_, i) => i + 1);
+    
+    return { years, months, days };
   };
 
   return (
@@ -378,7 +394,7 @@ export default function AddEntryScreen({ route }: AddEntryScreenProps) {
                 />
               </View>
               <TouchableOpacity
-                onPress={() => setShowDatePicker(true)}
+                onPress={handleCalendarPress}
                 className="border-frost bg-pure-white ml-2 rounded-lg border"
                 style={{ 
                   height: 56, // Match the input height
@@ -415,12 +431,93 @@ export default function AddEntryScreen({ route }: AddEntryScreenProps) {
 
         {/* Date Picker Modal */}
         {showDatePicker && (
-          <DateTimePicker
-            value={date}
-            mode="date"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            onChange={handleDateChange}
-          />
+          <Modal
+            animationType="slide"
+            transparent={true}
+            visible={showDatePicker}
+            onRequestClose={() => setShowDatePicker(false)}
+          >
+            <View className="flex-1 justify-end bg-black/50">
+              <View className="bg-white rounded-t-xl p-4">
+                <View className="flex-row justify-between items-center mb-4">
+                  <ThemedButton 
+                    variant="text" 
+                    onPress={() => setShowDatePicker(false)}
+                  >
+                    Cancel
+                  </ThemedButton>
+                  <Text className="text-lg font-medium">Select Date</Text>
+                  <ThemedButton 
+                    variant="text" 
+                    onPress={() => {
+                      setShowDatePicker(false);
+                    }}
+                  >
+                    Done
+                  </ThemedButton>
+                </View>
+                
+                <View className="flex-row justify-evenly">
+                  {/* Simple date selection with buttons */}
+                  <View className="items-center">
+                    <Text className="text-sm text-gray-500 mb-2">Month</Text>
+                    {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((month, index) => (
+                      <TouchableOpacity
+                        key={month}
+                        className={`py-2 px-4 my-1 rounded ${date.getMonth() === index ? 'bg-red-500' : 'bg-gray-200'}`}
+                        onPress={() => {
+                          const newDate = new Date(date);
+                          newDate.setMonth(index);
+                          setDate(newDate);
+                          setDateText(formatDate(newDate));
+                        }}
+                      >
+                        <Text className={date.getMonth() === index ? 'text-white' : 'text-black'}>{month}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  
+                  <View className="items-center">
+                    <Text className="text-sm text-gray-500 mb-2">Day</Text>
+                    <View className="flex-row flex-wrap justify-center" style={{ width: 160 }}>
+                      {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
+                        <TouchableOpacity
+                          key={day}
+                          className={`py-2 px-3 m-1 rounded ${date.getDate() === day ? 'bg-red-500' : 'bg-gray-200'}`}
+                          onPress={() => {
+                            const newDate = new Date(date);
+                            newDate.setDate(day);
+                            setDate(newDate);
+                            setDateText(formatDate(newDate));
+                          }}
+                        >
+                          <Text className={date.getDate() === day ? 'text-white' : 'text-black'}>{day}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                  
+                  <View className="items-center">
+                    <Text className="text-sm text-gray-500 mb-2">Year</Text>
+                    {[2022, 2023, 2024, 2025].map((year) => (
+                      <TouchableOpacity
+                        key={year}
+                        className={`py-2 px-4 my-1 rounded ${date.getFullYear() === year ? 'bg-red-500' : 'bg-gray-200'}`}
+                        onPress={() => {
+                          const newDate = new Date(date);
+                          newDate.setFullYear(year);
+                          setDate(newDate);
+                          setDateText(formatDate(newDate));
+                        }}
+                      >
+                        <Text className={date.getFullYear() === year ? 'text-white' : 'text-black'}>{year}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              </View>
+            </View>
+          </Modal>
         )}
       </Animated.View>
     </ScreenContent>
