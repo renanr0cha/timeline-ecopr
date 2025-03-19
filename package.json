@@ -25,6 +25,7 @@
     "expo-application": "^6.0.2",
     "expo-dev-client": "~5.0.12",
     "expo-font": "^13.0.4",
+    "expo-linear-gradient": "~13.0.3",
     "expo-secure-store": "^14.0.1",
     "expo-status-bar": "~2.0.1",
     "nativewind": "^4.1.23",

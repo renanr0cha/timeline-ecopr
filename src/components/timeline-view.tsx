@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect } from 'react';
-import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { EntryType, TimelineEntry } from '../types';
 
@@ -10,7 +11,7 @@ interface TimelineViewProps {
 }
 
 // Map entry types to their icon names
-const ENTRY_TYPE_ICONS: Record<EntryType, string> = {
+const ENTRY_TYPE_ICONS: Record<EntryType, keyof typeof Ionicons.glyphMap> = {
   'submission': 'paper-plane-outline',
   'aor': 'document-text-outline',
   'biometrics_request': 'finger-print-outline',
@@ -24,6 +25,40 @@ const ENTRY_TYPE_ICONS: Record<EntryType, string> = {
   'p2': 'people-outline',
   'ecopr': 'mail-outline',
   'pr_card': 'card-outline'
+};
+
+// Get gradient colors for milestone type
+const getMilestoneGradient = (entryType: string): string[] => {
+  switch (entryType) {
+    case 'submission':
+      return ['#9333ea', '#a855f7']; // purple gradient
+    case 'aor':
+      return ['#e11e38', '#ef4444']; // maple red gradient
+    case 'biometrics_request':
+      return ['#0d9488', '#14b8a6']; // teal gradient
+    case 'biometrics_complete':
+      return ['#0d9488', '#0f766e']; // dark teal gradient
+    case 'medicals_request':
+      return ['#3b82f6', '#60a5fa']; // blue gradient
+    case 'medicals_complete':
+      return ['#2563eb', '#3b82f6']; // darker blue gradient
+    case 'background_start':
+      return ['#eab308', '#facc15']; // yellow gradient
+    case 'background_complete':
+      return ['#ca8a04', '#eab308']; // darker yellow gradient
+    case 'additional_docs':
+      return ['#f97316', '#fb923c']; // orange gradient
+    case 'p1':
+      return ['#dc2626', '#ef4444']; // hope red gradient
+    case 'p2':
+      return ['#dc2626', '#b91c1c']; // darker hope red gradient
+    case 'ecopr':
+      return ['#22c55e', '#4ade80']; // success gradient
+    case 'pr_card':
+      return ['#f59e0b', '#fbbf24']; // waiting/amber gradient
+    default:
+      return ['#6b7280', '#9ca3af']; // gray gradient
+  }
 };
 
 /**
@@ -170,6 +205,9 @@ export const TimelineView = ({ entries, onEntryPress }: TimelineViewProps) => {
           inputRange: [0, 1],
           outputRange: [50, 0],
         });
+        
+        // Get gradient colors for this entry type
+        const gradientColors = getMilestoneGradient(entry.entry_type);
 
         return (
           <Animated.View
@@ -178,44 +216,82 @@ export const TimelineView = ({ entries, onEntryPress }: TimelineViewProps) => {
             className="relative">
             {/* Timeline row */}
             <View className="mb-4 flex-row">
-              {/* Timeline line and dot with icon */}
+              {/* Timeline dot with icon and gradient */}
               <View className="z-10 mr-4 items-center" style={{ width: 32 }}>
-                <View className={`h-8 w-8 items-center justify-center rounded-full ${getEntryTypeColor(entry.entry_type)}`}>
+                <LinearGradient
+                  colors={gradientColors}
+                  className="h-10 w-10 items-center justify-center rounded-full shadow-md"
+                  style={{ 
+                    elevation: 4,
+                    shadowColor: gradientColors[0],
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.25,
+                    shadowRadius: 3,
+                  }}
+                >
                   <Ionicons 
-                    name={ENTRY_TYPE_ICONS[entry.entry_type as EntryType] as any} 
-                    size={16} 
+                    name={ENTRY_TYPE_ICONS[entry.entry_type as EntryType]} 
+                    size={18} 
                     color="#FFFFFF" 
                   />
                   {/* Small checkmark badge for completed items */}
-                  <View className="absolute -right-1 -bottom-1 h-4 w-4 items-center justify-center rounded-full bg-success">
+                  <View className="absolute -right-1 -bottom-1 h-5 w-5 items-center justify-center rounded-full bg-success shadow-sm">
                     <Ionicons name="checkmark" size={12} color="#FFFFFF" />
                   </View>
-                </View>
+                </LinearGradient>
               </View>
 
-              {/* Content */}
-              <View
-                className="mb-4 flex-1 rounded-xl border border-gray-100 bg-white p-4 shadow-sm"
-                style={styles.cardShadow}>
-                <View className="mb-2 flex-row items-center justify-between">
-                  <View className={`rounded-full px-3 py-1 ${getEntryTypeColor(entry.entry_type)}`}>
-                    <Text className="text-xs font-medium text-white">
-                      {getEntryTypeName(entry.entry_type)}
-                    </Text>
+              {/* Content card with improved styling */}
+              <TouchableOpacity
+                onPress={() => onEntryPress?.(entry)}
+                activeOpacity={onEntryPress ? 0.7 : 1}
+                className="mb-4 flex-1"
+              >
+                <View
+                  className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm"
+                  style={{
+                    ...styles.cardShadow,
+                    shadowColor: gradientColors[0],
+                    shadowOpacity: 0.15,
+                  }}
+                >
+                  <View className="mb-2 flex-row items-center justify-between">
+                    <LinearGradient
+                      colors={gradientColors}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      className="rounded-full px-3 py-1 shadow-sm"
+                    >
+                      <Text className="text-xs font-medium text-white">
+                        {getEntryTypeName(entry.entry_type)}
+                      </Text>
+                    </LinearGradient>
+                    <Text className="text-sm text-gray-500 font-medium">{formatDate(entry.entry_date)}</Text>
                   </View>
-                  <Text className="text-sm text-gray-500">{formatDate(entry.entry_date)}</Text>
-                </View>
 
-                {entry.notes && <Text className="text-gray-700">{entry.notes}</Text>}
-              </View>
+                  {entry.notes && <Text className="text-gray-700 mt-1">{entry.notes}</Text>}
+                </View>
+              </TouchableOpacity>
             </View>
             
-            {/* Connecting line to next milestone (except for the last one) */}
+            {/* Connecting line to next milestone with gradient */}
             {index !== orderedEntries.length - 1 && (
               <View 
-                className="absolute left-4 top-8 -z-0 w-0.5 bg-gray-300" 
-                style={{ height: 60 }} 
-              />
+                className="absolute left-4 top-10 -z-0 w-[2px] overflow-hidden" 
+                style={{ height: 70 }}
+              >
+                <LinearGradient
+                  colors={[
+                    gradientColors[0],
+                    index < orderedEntries.length - 1 ? 
+                      getMilestoneGradient(orderedEntries[index + 1].entry_type)[0] : 
+                      '#d1d5db'
+                  ]}
+                  start={{ x: 0.5, y: 0 }}
+                  end={{ x: 0.5, y: 1 }}
+                  className="h-full w-full"
+                />
+              </View>
             )}
           </Animated.View>
         );
