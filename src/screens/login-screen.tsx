@@ -1,12 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
-import { appleLogin } from 'better-auth';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Text, TouchableOpacity, View } from 'react-native';
 
 import { ScreenContent } from '../components/screen-content';
 import { ThemedCard } from '../components/themed-card';
+import { signInWithApple, signInWithGoogle } from '../lib/auth';
 import { logger } from '../lib/logger';
 import { supabase } from '../lib/supabase';
 import { AuthState } from '../types';
@@ -17,12 +16,6 @@ interface LoginScreenProps {
   authState: AuthState;
   setAuthState: React.Dispatch<React.SetStateAction<AuthState>>;
 }
-
-// Configure Google Sign-In
-GoogleSignin.configure({
-  webClientId: '1234567890-abc123def456.apps.googleusercontent.com', // replace with your web client ID
-  iosClientId: '1234567890-ghi789jkl012.apps.googleusercontent.com', // replace with your iOS client ID if you have one
-});
 
 /**
  * Login screen component that provides social sign-in options
@@ -63,17 +56,14 @@ export default function LoginScreen({ onLoginSuccess, authState, setAuthState }:
     try {
       setIsLoading(true);
       setError(null);
-
-      // Ensure Google Play Services are available (Android only)
-      await GoogleSignin.hasPlayServices();
       
-      // Sign in with Google
-      const { idToken } = await GoogleSignin.signIn();
+      // Sign in with Google using BetterAuth
+      const { token } = await signInWithGoogle();
       
       // Sign in with Supabase using Google token
       const { data, error } = await supabase.auth.signInWithIdToken({
         provider: 'google',
-        token: idToken,
+        token,
       });
 
       if (error) throw error;
@@ -95,20 +85,13 @@ export default function LoginScreen({ onLoginSuccess, authState, setAuthState }:
       setIsLoading(true);
       setError(null);
 
-      // Start Apple sign-in flow
-      const { appleAuthRequestResponse } = await appleLogin();
-      
-      // Extract the identity token (JWT)
-      const { identityToken } = appleAuthRequestResponse;
-      
-      if (!identityToken) {
-        throw new Error('No identity token returned from Apple');
-      }
+      // Sign in with Apple using BetterAuth
+      const { token } = await signInWithApple();
       
       // Sign in with Supabase using Apple token
       const { data, error } = await supabase.auth.signInWithIdToken({
         provider: 'apple',
-        token: identityToken,
+        token,
       });
 
       if (error) throw error;
