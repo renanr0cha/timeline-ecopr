@@ -1,82 +1,148 @@
 import { betterAuth } from 'better-auth';
 
+import { AuthState } from '../types';
+import { logger } from './logger';
+import { supabase } from './supabase';
+
 /**
- * BetterAuth configuration for social authentication
+ * Configure BetterAuth with Supabase integration
  */
 export const auth = betterAuth({
-  // Apple configuration
-  apple: {
-    // Enable Apple authentication
-    enabled: true,
-    // Options for Apple Sign In
-    options: {
-      // Your Apple Service ID (can be obtained from Apple Developer Portal)
-      clientId: 'com.yourcompany.timeline-ecopr',
-      // Redirect URL registered in your Apple Developer Portal
-      redirectUri: 'https://your-supabase-project.supabase.co/auth/v1/callback',
-      // Requested scopes (name and email are common)
-      scopes: ['name', 'email'],
-    },
-  },
-  
-  // Google configuration
-  google: {
-    // Enable Google authentication
-    enabled: true,
-    // Options for Google Sign In
-    options: {
-      // Your Google Web Client ID from Google Cloud Console
-      webClientId: 'your-web-client-id.apps.googleusercontent.com',
-      // Optional iOS Client ID for better iOS integration
-      iosClientId: 'your-ios-client-id.apps.googleusercontent.com',
-      // Optional offline access for refreshing tokens
-      offlineAccess: true,
-      // Requested scopes (profile and email are typical defaults)
-      scopes: ['profile', 'email'],
-    },
-  },
-  
-  // Common configuration
-  common: {
-    // URL to your Supabase auth callback endpoint
-    redirectUrl: 'https://your-supabase-project.supabase.co/auth/v1/callback',
-    // Optional custom error handler
-    onError: (error) => {
-      console.error('Authentication error:', error);
-    },
+  supabase,
+  logger: {
+    debug: logger.debug,
+    info: logger.info,
+    warn: logger.warn,
+    error: logger.error
   },
 });
 
 /**
- * Sign in with Google using BetterAuth
- * @returns Promise with the auth response
+ * Sign up a new user with email and password
+ *
+ * @param email User's email address
+ * @param password User's password
+ * @returns Promise resolving to the auth data or error
  */
-export const signInWithGoogle = async () => {
+export const signUpWithEmail = async (email: string, password: string) => {
   try {
-    // Start Google sign-in flow
-    const { token, user } = await auth.google.signIn();
-    
-    // Return the authentication result
-    return { token, user };
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+
+    if (error) {
+      logger.error('Error signing up with email', { error });
+      throw error;
+    }
+
+    logger.info('User signed up successfully', { userId: data.user?.id });
+    return { data };
   } catch (error) {
-    console.error('Google sign-in error:', error);
+    logger.error('Error in signUpWithEmail', { error });
     throw error;
   }
 };
 
 /**
- * Sign in with Apple using BetterAuth
- * @returns Promise with the auth response
+ * Sign in a user with email and password
+ *
+ * @param email User's email address
+ * @param password User's password
+ * @returns Promise resolving to the auth data or error
  */
-export const signInWithApple = async () => {
+export const signInWithEmail = async (email: string, password: string) => {
   try {
-    // Start Apple sign-in flow
-    const { token, user } = await auth.apple.signIn();
-    
-    // Return the authentication result
-    return { token, user };
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      logger.error('Error signing in with email', { error });
+      throw error;
+    }
+
+    logger.info('User signed in successfully', { userId: data.user?.id });
+    return { data };
   } catch (error) {
-    console.error('Apple sign-in error:', error);
+    logger.error('Error in signInWithEmail', { error });
     throw error;
+  }
+};
+
+/**
+ * Sign out the current user
+ */
+export const signOut = async () => {
+  try {
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      logger.error('Error signing out', { error });
+      throw error;
+    }
+
+    logger.info('User signed out successfully');
+  } catch (error) {
+    logger.error('Error in signOut', { error });
+    throw error;
+  }
+};
+
+/**
+ * Reset a user's password
+ *
+ * @param email User's email address
+ */
+export const resetPassword = async (email: string) => {
+  try {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: 'timeline-ecopr://reset-password',
+    });
+
+    if (error) {
+      logger.error('Error resetting password', { error });
+      throw error;
+    }
+
+    logger.info('Password reset email sent', { email });
+  } catch (error) {
+    logger.error('Error in resetPassword', { error });
+    throw error;
+  }
+};
+
+/**
+ * Check current auth state
+ *
+ * @returns Current auth state (session and user)
+ */
+export const getAuthState = async (): Promise<AuthState> => {
+  try {
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.getSession();
+
+    if (error) {
+      logger.error('Error getting session', { error });
+      return { session: null, user: null };
+    }
+
+    const mappedSession = session ? {
+      access_token: session.access_token,
+      refresh_token: session.refresh_token,
+      expires_at: session.expires_at || 0,
+      user: session.user
+    } : null;
+
+    return {
+      session: mappedSession,
+      user: session?.user || null,
+    };
+  } catch (error) {
+    logger.error('Error in getAuthState', { error });
+    return { session: null, user: null };
   }
 };
