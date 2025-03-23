@@ -1,20 +1,60 @@
 import { Ionicons } from '@expo/vector-icons';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
-import { TouchableOpacity } from 'react-native';
 
 import AddEntryScreen from '../screens/add-entry-screen';
 import HomeScreen from '../screens/home-screen';
 import MockDataDemo from '../screens/mock-data-demo';
 import StatisticsScreen from '../screens/statistics-screen';
-import { RootStackParamList } from '../types';
+import { RootStackParamList, TabsParamList } from '../types';
 
 interface AppNavigatorProps {
   deviceId: string;
 }
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+const Tab = createBottomTabNavigator<TabsParamList>();
+
+/**
+ * Bottom tabs navigator component
+ */
+const TabsNavigator = ({ deviceId }: { deviceId: string }) => {
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName: any = 'home';
+          
+          if (route.name === 'HomeTab') {
+            iconName = focused ? 'home' : 'home-outline';
+          } else if (route.name === 'StatisticsTab') {
+            iconName = focused ? 'stats-chart' : 'stats-chart-outline';
+          }
+          
+          return <Ionicons name={iconName} size={size} color={color} />;
+        },
+        tabBarActiveTintColor: '#0284c7',
+        tabBarInactiveTintColor: '#64748b',
+        headerShown: false,
+      })}
+    >
+      <Tab.Screen 
+        name="HomeTab" 
+        component={HomeScreen} 
+        initialParams={{ deviceId }}
+        options={{ title: 'Timeline' }}
+      />
+      <Tab.Screen 
+        name="StatisticsTab" 
+        component={StatisticsScreen} 
+        initialParams={{ deviceId }}
+        options={{ title: 'Statistics' }}
+      />
+    </Tab.Navigator>
+  );
+};
 
 /**
  * Main application navigator component
@@ -24,7 +64,7 @@ export function AppNavigator({ deviceId }: AppNavigatorProps) {
   return (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName="Home"
+        initialRouteName="Main"
         screenOptions={{
           headerStyle: {
             backgroundColor: '#f8fafc',
@@ -39,20 +79,11 @@ export function AppNavigator({ deviceId }: AppNavigatorProps) {
           },
         }}>
         <Stack.Screen
-          name="Home"
-          component={HomeScreen}
-          initialParams={{ deviceId }}
-          options={({ navigation }) => ({
-            title: 'Timeline',
-            headerRight: () => (
-              <TouchableOpacity
-                onPress={() => navigation.navigate('MockDataDemo')}
-                className="mr-2">
-                <Ionicons name="layers-outline" size={24} color="#0284c7" />
-              </TouchableOpacity>
-            ),
-          })}
-        />
+          name="Main"
+          options={{ headerShown: false }}
+        >
+          {() => <TabsNavigator deviceId={deviceId} />}
+        </Stack.Screen>
         <Stack.Screen
           name="AddEntry"
           component={AddEntryScreen}
@@ -61,14 +92,6 @@ export function AppNavigator({ deviceId }: AppNavigatorProps) {
             title: 'Add Entry',
             presentation: 'modal',
             animation: 'slide_from_bottom',
-          }}
-        />
-        <Stack.Screen
-          name="Statistics"
-          component={StatisticsScreen}
-          initialParams={{ deviceId }}
-          options={{
-            title: 'Statistics',
           }}
         />
         <Stack.Screen

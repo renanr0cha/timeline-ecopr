@@ -9,9 +9,9 @@ export * from './errors';
 /**
  * Entry types for timeline entries
  */
-export type EntryType = 
+export type EntryType =
   | 'submission'
-  | 'aor' 
+  | 'aor'
   | 'biometrics_request'
   | 'biometrics_complete'
   | 'medicals_request'
@@ -20,8 +20,8 @@ export type EntryType =
   | 'background_complete'
   | 'additional_docs'
   | 'p1'
-  | 'p2' 
-  | 'ecopr' 
+  | 'p2'
+  | 'ecopr'
   | 'pr_card';
 
 /**
@@ -73,10 +73,25 @@ export interface DeviceData {
  * Navigation parameters for stack navigator
  */
 export type RootStackParamList = {
+  Main: undefined;
   Home: { deviceId: string };
-  AddEntry: { deviceId: string; entryType?: EntryType; entryId?: string; onComplete?: () => void; existingEntries?: TimelineEntry[] };
+  AddEntry: {
+    deviceId: string;
+    entryType?: EntryType;
+    entryId?: string;
+    onComplete?: () => void;
+    existingEntries?: TimelineEntry[];
+  };
   Statistics: { deviceId: string };
   MockDataDemo: undefined;
+};
+
+/**
+ * Navigation parameters for bottom tabs
+ */
+export type TabsParamList = {
+  HomeTab: { deviceId: string };
+  StatisticsTab: { deviceId: string };
 };
 
 /**

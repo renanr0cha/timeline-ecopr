@@ -1,15 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import React, { useEffect, useState } from 'react';
-import {
-    ActivityIndicator,
-    Alert,
-    Animated,
-    Text,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Animated, Text, TouchableOpacity, View } from 'react-native';
 
 import { ProgressSummary } from '../components/progress-summary';
 import { ScreenContent } from '../components/screen-content';
@@ -42,13 +35,14 @@ interface HomeScreenProps {
       deviceId: string;
     };
   };
+  navigation: any;
 }
 
 /**
  * Home screen component that displays the user's timeline entries
  * Shows a visual progress summary and timeline view
  */
-export default function HomeScreen({ route }: HomeScreenProps) {
+export default function HomeScreen({ navigation, route }: HomeScreenProps) {
   const { deviceId } = route.params;
   const [entries, setEntries] = useState<TimelineEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,7 +50,6 @@ export default function HomeScreen({ route }: HomeScreenProps) {
   const [showAddNextStepPrompt, setShowAddNextStepPrompt] = useState(false);
   const [nextStepType, setNextStepType] = useState<EntryType | null>(null);
   const [timelineExpanded, setTimelineExpanded] = useState(false);
-  const navigation = useNavigation<HomeScreenNavigationProp>();
 
   // Animation for timeline section
   const rotateAnim = useState(new Animated.Value(0))[0];
@@ -97,41 +90,31 @@ export default function HomeScreen({ route }: HomeScreenProps) {
     loadEntries();
   }, [deviceId, useMockData]);
 
+  // Load entries when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadEntries();
+      // Reset the add button prompt state when returning to screen
+      setShowAddNextStepPrompt(false);
+      setNextStepType(null);
+    }, [deviceId, useMockData])
+  );
+
   /**
-   * Handle adding an entry and showing the next step prompt
+   * Navigate to add entry screen with the specified entry type
+   * @param entryType Entry type to add
    */
-  const handleAddEntry = (entryType: EntryType) => {
-    setNextStepType(entryType);
+  const navigateToAddEntry = (entryType: EntryType) => {
     navigation.navigate('AddEntry', {
       deviceId,
       entryType,
       existingEntries: entries,
-      onComplete: () => {
-        loadEntries(); // Reload entries after adding
-        
-        // Determine the next step to prompt for
-        const milestones: EntryType[] = [
-          'submission', 
-          'aor', 
-          'biometrics_request',
-          'biometrics_complete',
-          'medicals_request',
-          'medicals_complete',
-          'background_start',
-          'background_complete',
-          'p1',
-          'p2', 
-          'ecopr', 
-          'pr_card'
-        ];
-        const currentIndex = milestones.findIndex(m => m === entryType);
-        
-        if (currentIndex < milestones.length - 1) {
-          setNextStepType(milestones[currentIndex + 1]);
-          setShowAddNextStepPrompt(true);
-        }
-      },
     });
+  };
+
+  // Handle add entry for a specific milestone type
+  const handleAddEntry = (entryType: EntryType) => {
+    navigateToAddEntry(entryType);
   };
 
   /**
@@ -166,7 +149,7 @@ export default function HomeScreen({ route }: HomeScreenProps) {
   const toggleTimelineExpanded = () => {
     const newValue = !timelineExpanded;
     setTimelineExpanded(newValue);
-    
+
     Animated.parallel([
       Animated.timing(rotateAnim, {
         toValue: newValue ? 1 : 0,
@@ -190,16 +173,32 @@ export default function HomeScreen({ route }: HomeScreenProps) {
   // Check if user has entries
   const hasEntries = entries.length > 0;
 
+  // Add this function to navigate to MockDataDemo
+  const goToMockDataDemo = () => {
+    navigation.navigate('MockDataDemo');
+  };
+
+  // Update useEffect to add the header right button
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity onPress={goToMockDataDemo} className="mr-2">
+          <Ionicons name="layers-outline" size={24} color="#0284c7" />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation]);
+
   return (
     <ScreenContent scrollable>
-      <View className="flex-1 px-4 py-6">
+      <View className="flex-1 py-6">
         {/* Header Section */}
         <View className="mb-6 flex-row items-center justify-between">
           <SectionHeader
             title="Your PR Journey"
             description="Track your progress towards permanent residency"
             size="lg"
-            className="flex-1 mb-0"
+            className="mb-0 flex-1"
           />
 
           <TouchableOpacity
@@ -207,9 +206,8 @@ export default function HomeScreen({ route }: HomeScreenProps) {
             className={`rounded-full px-3 py-1.5 ${
               useMockData ? 'bg-success/10' : 'bg-inactive/10'
             }`}>
-            <Text className={`text-xs font-medium ${
-              useMockData ? 'text-success' : 'text-inactive'
-            }`}>
+            <Text
+              className={`text-xs font-medium ${useMockData ? 'text-success' : 'text-inactive'}`}>
               {useMockData ? 'Using Sample Data' : 'Use Sample Data'}
             </Text>
           </TouchableOpacity>
@@ -218,21 +216,16 @@ export default function HomeScreen({ route }: HomeScreenProps) {
         {loading ? (
           <ThemedCard className="items-center justify-center py-12">
             <ActivityIndicator size="large" color="#FF1E38" />
-            <Text className="mt-4 text-text-secondary">
-              Loading your journey data...
-            </Text>
+            <Text className="mt-4 text-text-secondary">Loading your journey data...</Text>
           </ThemedCard>
         ) : (
           <>
             {/* Progress Summary - Always shown, with empty state if no entries */}
-            <ThemedCard className="mb-6" variant="elevated">
-              <ProgressSummary 
-                entries={entries} 
-                onAddEntry={handleAddEntry} 
-                emptyState={!hasEntries}
-              />
-            </ThemedCard>
-
+            <ProgressSummary
+              entries={entries}
+              onAddEntry={handleAddEntry}
+              emptyState={!hasEntries}
+            />
             {/* Collapsible Timeline Section */}
             {hasEntries && (
               <ThemedCard className="mb-6" variant="default">
@@ -243,7 +236,7 @@ export default function HomeScreen({ route }: HomeScreenProps) {
                   <SectionHeader
                     title="Journey History"
                     description="View your milestone timeline"
-                    className="flex-1 mb-0"
+                    className="mb-0 flex-1"
                   />
                   <Animated.View style={{ transform: [{ rotate }] }}>
                     <Ionicons name="chevron-down" size={24} color="#6C757D" />
@@ -288,12 +281,8 @@ export default function HomeScreen({ route }: HomeScreenProps) {
               <ThemedCard variant="elevated">
                 <View className="flex-row items-center justify-between">
                   <View className="flex-1">
-                    <Text className="text-lg font-bold text-text-primary">
-                      Community Insights
-                    </Text>
-                    <Text className="text-text-secondary">
-                      See how your timeline compares
-                    </Text>
+                    <Text className="text-lg font-bold text-text-primary">Community Insights</Text>
+                    <Text className="text-text-secondary">See how your timeline compares</Text>
                   </View>
                   <View className="rounded-full bg-maple-red/10 p-2">
                     <Ionicons name="bar-chart-outline" size={24} color="#FF1E38" />
