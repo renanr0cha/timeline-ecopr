@@ -49,16 +49,28 @@ export class DeviceNotFoundError extends ApplicationError {
 }
 
 /**
- * Error thrown when a timeline entry is not found
+ * Custom error for when a user is not found
  */
-export class EntryNotFoundError extends ApplicationError {
+export class UserNotFoundError extends Error {
+  userId: string;
+
+  constructor(userId: string) {
+    super(`User not found: ${userId}`);
+    this.name = 'UserNotFoundError';
+    this.userId = userId;
+  }
+}
+
+/**
+ * Custom error for when a timeline entry is not found
+ */
+export class EntryNotFoundError extends Error {
   entryId: string;
 
   constructor(entryId: string) {
     super(`Timeline entry not found: ${entryId}`);
     this.name = 'EntryNotFoundError';
     this.entryId = entryId;
-    Object.setPrototypeOf(this, EntryNotFoundError.prototype);
   }
 }
 
@@ -77,15 +89,46 @@ export class ValidationError extends ApplicationError {
 }
 
 /**
- * Error thrown when network connection issues occur
+ * Custom error for validation failures when adding or updating entries
  */
-export class NetworkError extends ApplicationError {
-  originalError?: Error;
+export class EntryValidationError extends Error {
+  entry: Partial<TimelineEntry>;
+  fieldErrors: Record<string, string>;
 
-  constructor(message: string, originalError?: Error) {
+  constructor(message: string, entry: Partial<TimelineEntry>, fieldErrors: Record<string, string>) {
+    super(message);
+    this.name = 'EntryValidationError';
+    this.entry = entry;
+    this.fieldErrors = fieldErrors;
+  }
+}
+
+/**
+ * Custom error for authentication issues
+ */
+export class AuthenticationError extends Error {
+  constructor(message = 'Authentication required') {
+    super(message);
+    this.name = 'AuthenticationError';
+  }
+}
+
+/**
+ * Custom error for permission issues
+ */
+export class PermissionError extends Error {
+  constructor(message = 'Insufficient permissions to perform this action') {
+    super(message);
+    this.name = 'PermissionError';
+  }
+}
+
+/**
+ * Custom error for network connectivity issues
+ */
+export class NetworkError extends Error {
+  constructor(message = 'Network error occurred') {
     super(message);
     this.name = 'NetworkError';
-    this.originalError = originalError;
-    Object.setPrototypeOf(this, NetworkError.prototype);
   }
 }

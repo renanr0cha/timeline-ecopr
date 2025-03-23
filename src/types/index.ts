@@ -29,7 +29,7 @@ export type EntryType =
  */
 export interface TimelineEntry {
   id?: string;
-  device_id?: string;
+  user_id?: string;
   entry_type: EntryType;
   entry_date: string;
   notes?: string;
@@ -74,15 +74,14 @@ export interface DeviceData {
  */
 export type RootStackParamList = {
   Main: undefined;
-  Home: { deviceId: string };
+  Home: undefined;
   AddEntry: {
-    deviceId: string;
     entryType?: EntryType;
     entryId?: string;
     onComplete?: () => void;
     existingEntries?: TimelineEntry[];
   };
-  Statistics: { deviceId: string };
+  Statistics: undefined;
   MockDataDemo: undefined;
 };
 
@@ -90,8 +89,8 @@ export type RootStackParamList = {
  * Navigation parameters for bottom tabs
  */
 export type TabsParamList = {
-  HomeTab: { deviceId: string };
-  StatisticsTab: { deviceId: string };
+  HomeTab: undefined;
+  StatisticsTab: undefined;
 };
 
 /**
@@ -132,4 +131,58 @@ export interface SupabaseError {
   message: string;
   hint?: string;
   details?: string;
+}
+
+/**
+ * Authentication state
+ */
+export interface AuthState {
+  session: Session | null;
+  user: User | null;
+}
+
+/**
+ * User session type
+ */
+export interface Session {
+  access_token: string;
+  refresh_token: string;
+  expires_at: number;
+  user: User;
+}
+
+/**
+ * User profile
+ */
+export interface User {
+  id: string;
+  email?: string;
+  app_metadata: {
+    provider?: string;
+    [key: string]: any;
+  };
+  user_metadata: {
+    avatar_url?: string;
+    full_name?: string;
+    name?: string;
+    [key: string]: any;
+  };
+  [key: string]: any;
+}
+
+/**
+ * Statistics for a user's journey transition metrics
+ */
+export interface TransitionStatistics {
+  submissionToAOR: number;
+  aorToBiometrics: number;
+  biometricsToMedicals: number;
+  backgroundCheckDuration: number;
+  totalProcessingTime: number;
+  applicationProgress: number;
+  estimatedDaysRemaining: number;
+  milestoneNotes: {
+    title: string;
+    description: string;
+  }[];
 }

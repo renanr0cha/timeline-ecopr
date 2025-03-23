@@ -2,8 +2,8 @@ import { PostgrestError } from '@supabase/supabase-js';
 
 import { logger } from '../lib/logger';
 import { supabase } from '../lib/supabase';
-import { CommunityStatistic } from '../types';
-import { loadMockStatisticsData } from '../utils/mock-data';
+import { CommunityStatistic, TransitionStatistics } from '../types';
+import { getMockTransitionStatistics, loadMockStatisticsData } from '../utils/mock-data';
 
 /**
  * Service for retrieving and processing community statistics
@@ -13,7 +13,7 @@ export const statisticsService = {
   /**
    * Flag to toggle use of mock data for statistics
    */
-  useMockData: false,
+  useMockData: true,
 
   /**
    * Toggle mock data on/off
@@ -22,6 +22,59 @@ export const statisticsService = {
     this.useMockData = !this.useMockData;
     logger.info('Mock data for statistics', { enabled: this.useMockData });
     return this.useMockData;
+  },
+
+  /**
+   * Retrieves personal user statistics for the authenticated user
+   * 
+   * @param transitionType - Optional transition type to focus the statistics on
+   * @returns Promise resolving to user transition statistics
+   */
+  async getUserStatistics(transitionType?: string): Promise<TransitionStatistics | null> {
+    try {
+      logger.info('Fetching user statistics', { transitionType });
+      
+      // Check if user is authenticated
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.user) {
+        logger.warn('No authenticated user found when getting statistics');
+        return null;
+      }
+      
+      const userId = session.user.id;
+      
+      // Currently using mock data
+      if (this.useMockData) {
+        logger.info('Using mock statistics data for user', { userId, transitionType });
+        const mockData = getMockTransitionStatistics(transitionType || 'p1');
+        return mockData;
+      }
+      
+      // TODO: Implement real data retrieval from Supabase
+      // This would query a view or function that calculates statistics based on the user's timeline
+      // const { data, error } = await supabase.rpc('get_user_statistics', {
+      //   user_id: userId,
+      //   transition_type: transitionType || null
+      // });
+      
+      // For now, return mock data
+      return getMockTransitionStatistics(transitionType || 'p1');
+    } catch (error) {
+      // Specific handling for different error types
+      if (error instanceof PostgrestError) {
+        logger.error('Supabase error retrieving user statistics', {
+          code: error.code,
+          message: error.message,
+          hint: error.hint,
+        });
+      } else if (error instanceof Error) {
+        logger.error('Error retrieving user statistics', { message: error.message });
+      } else {
+        logger.error('Unknown error retrieving user statistics', { error });
+      }
+      return null;
+    }
   },
 
   /**
@@ -44,6 +97,14 @@ export const statisticsService = {
         const mockData = loadMockStatisticsData(transitionType);
         logger.info('Mock statistics loaded successfully', { count: mockData.length });
         return mockData;
+      }
+
+      // Check if user is authenticated
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.user) {
+        logger.warn('No authenticated user found when getting community statistics');
+        return [];
       }
 
       // Call the stored procedure

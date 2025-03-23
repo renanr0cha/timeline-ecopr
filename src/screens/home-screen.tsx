@@ -11,9 +11,10 @@ import { ThemedButton } from '../components/themed-button';
 import { ThemedCard } from '../components/themed-card';
 import { TimelineView } from '../components/timeline-view';
 import { logger } from '../lib/logger';
+import { supabase } from '../lib/supabase';
 import { timelineService } from '../services/timeline-service';
 import { EntryType, RootStackParamList, TimelineEntry } from '../types';
-import { loadMockDataForCurrentDevice } from '../utils/mock-data';
+import { loadMockDataForCurrentUser } from '../utils/mock-data';
 
 // Updated to include onComplete in the AddEntry params
 type HomeScreenNavigationProp = NativeStackNavigationProp<
@@ -30,11 +31,6 @@ type HomeScreenNavigationProp = NativeStackNavigationProp<
 >;
 
 interface HomeScreenProps {
-  route: {
-    params: {
-      deviceId: string;
-    };
-  };
   navigation: any;
 }
 
@@ -42,8 +38,7 @@ interface HomeScreenProps {
  * Home screen component that displays the user's timeline entries
  * Shows a visual progress summary and timeline view
  */
-export default function HomeScreen({ navigation, route }: HomeScreenProps) {
-  const { deviceId } = route.params;
+export default function HomeScreen({ navigation }: HomeScreenProps) {
   const [entries, setEntries] = useState<TimelineEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [useMockData, setUseMockData] = useState(false);
@@ -63,13 +58,15 @@ export default function HomeScreen({ navigation, route }: HomeScreenProps) {
       setLoading(true);
 
       if (useMockData) {
-        // Load mock data
-        const mockEntries = loadMockDataForCurrentDevice(deviceId);
+        // Load mock data - now we need to get the userId from auth
+        const { data: { session } } = await supabase.auth.getSession();
+        const userId = session?.user?.id || 'mock-user-id';
+        const mockEntries = loadMockDataForCurrentUser(userId);
         setEntries(mockEntries);
         logger.info('Loaded mock timeline entries', { count: mockEntries.length });
       } else {
         // Load real data from the service
-        const data = await timelineService.getUserTimeline(deviceId);
+        const data = await timelineService.getUserTimeline();
         setEntries(data);
         logger.info('Loaded timeline entries', { count: data.length });
       }
@@ -88,7 +85,7 @@ export default function HomeScreen({ navigation, route }: HomeScreenProps) {
   // Load entries when component mounts or when useMockData changes
   useEffect(() => {
     loadEntries();
-  }, [deviceId, useMockData]);
+  }, [useMockData]);
 
   // Load entries when screen comes into focus
   useFocusEffect(
@@ -97,7 +94,7 @@ export default function HomeScreen({ navigation, route }: HomeScreenProps) {
       // Reset the add button prompt state when returning to screen
       setShowAddNextStepPrompt(false);
       setNextStepType(null);
-    }, [deviceId, useMockData])
+    }, [])
   );
 
   /**
@@ -106,7 +103,6 @@ export default function HomeScreen({ navigation, route }: HomeScreenProps) {
    */
   const navigateToAddEntry = (entryType: EntryType) => {
     navigation.navigate('AddEntry', {
-      deviceId,
       entryType,
       existingEntries: entries,
     });
@@ -140,7 +136,7 @@ export default function HomeScreen({ navigation, route }: HomeScreenProps) {
    * Navigate to the statistics screen
    */
   const goToStatistics = () => {
-    navigation.navigate('Statistics', { deviceId });
+    navigation.navigate('Statistics');
   };
 
   /**

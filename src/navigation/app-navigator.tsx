@@ -8,10 +8,10 @@ import AddEntryScreen from '../screens/add-entry-screen';
 import HomeScreen from '../screens/home-screen';
 import MockDataDemo from '../screens/mock-data-demo';
 import StatisticsScreen from '../screens/statistics-screen';
-import { RootStackParamList, TabsParamList } from '../types';
+import { AuthState, RootStackParamList, TabsParamList } from '../types';
 
 interface AppNavigatorProps {
-  deviceId: string;
+  authState: AuthState;
 }
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -20,7 +20,7 @@ const Tab = createBottomTabNavigator<TabsParamList>();
 /**
  * Bottom tabs navigator component
  */
-const TabsNavigator = ({ deviceId }: { deviceId: string }) => {
+const TabsNavigator = () => {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -43,13 +43,11 @@ const TabsNavigator = ({ deviceId }: { deviceId: string }) => {
       <Tab.Screen 
         name="HomeTab" 
         component={HomeScreen} 
-        initialParams={{ deviceId }}
         options={{ title: 'Timeline' }}
       />
       <Tab.Screen 
         name="StatisticsTab" 
         component={StatisticsScreen} 
-        initialParams={{ deviceId }}
         options={{ title: 'Statistics' }}
       />
     </Tab.Navigator>
@@ -60,7 +58,7 @@ const TabsNavigator = ({ deviceId }: { deviceId: string }) => {
  * Main application navigator component
  * Sets up the stack navigation structure
  */
-export function AppNavigator({ deviceId }: AppNavigatorProps) {
+export function AppNavigator({ authState }: AppNavigatorProps) {
   return (
     <NavigationContainer>
       <Stack.Navigator
@@ -82,12 +80,11 @@ export function AppNavigator({ deviceId }: AppNavigatorProps) {
           name="Main"
           options={{ headerShown: false }}
         >
-          {() => <TabsNavigator deviceId={deviceId} />}
+          {() => <TabsNavigator />}
         </Stack.Screen>
         <Stack.Screen
           name="AddEntry"
           component={AddEntryScreen}
-          initialParams={{ deviceId }}
           options={{
             title: 'Add Entry',
             presentation: 'modal',

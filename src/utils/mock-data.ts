@@ -1,3 +1,5 @@
+import { format, subDays } from 'date-fns';
+import { v4 as uuidv4 } from 'uuid';
 import { CommunityStatistic, EntryType, TimelineEntry, WeeklyBreakdown } from '../types';
 
 /**
@@ -75,87 +77,51 @@ const generateNotes = (entryType: EntryType): string => {
 };
 
 /**
- * Generates mock timeline entries for testing
- *
- * @param deviceId - Device identifier
- * @param count - Number of devices to generate data for
- * @returns Array of timeline entries
+ * Generate a set of mock timeline entries for testing
+ * @param userId - User identifier
+ * @param count - Number of entries to generate
+ * @returns Array of mock timeline entries
  */
 export const generateMockTimelineEntries = (
-  deviceId: string,
-  count: number = 20
+  userId: string,
+  count = 10
 ): TimelineEntry[] => {
   const entries: TimelineEntry[] = [];
-  const now = new Date();
-  const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
-  const twoYearsAgo = new Date(now.getFullYear() - 2, now.getMonth(), now.getDate());
+  const entryTypes: EntryType[] = [
+    'submission',
+    'aor',
+    'biometrics_request',
+    'biometrics_complete',
+    'medicals_request',
+    'medicals_complete',
+    'background_start',
+    'background_complete',
+    'p1',
+    'p2',
+    'ecopr',
+    'pr_card',
+  ];
 
-  // Generate entries for multiple devices
   for (let i = 0; i < count; i++) {
-    const mockDeviceId = i === 0 ? deviceId : `mock-device-${i.toString().padStart(3, '0')}`;
+    const mockUserId = i === 0 ? userId : `mock-user-${i.toString().padStart(3, '0')}`;
+    const randomEntryType = entryTypes[Math.floor(Math.random() * entryTypes.length)];
+    const randomDaysAgo = Math.floor(Math.random() * 365);
+    const createdDate = subDays(new Date(), randomDaysAgo);
+    const entryDate = subDays(createdDate, Math.floor(Math.random() * 7)); // Entry date up to a week before created date
 
-    // Generate AOR entry (always first in the process)
-    const aorDate = randomDate(twoYearsAgo, oneYearAgo);
     entries.push({
-      id: `mock-aor-${i}`,
-      device_id: mockDeviceId,
-      entry_type: 'aor',
-      entry_date: formatDate(aorDate),
-      notes: generateNotes('aor'),
-      created_at: new Date(aorDate.getTime() - Math.random() * 86400000).toISOString(),
+      id: uuidv4(),
+      user_id: mockUserId,
+      entry_type: randomEntryType,
+      entry_date: format(entryDate, 'yyyy-MM-dd'),
+      notes: `Mock entry for ${randomEntryType}`,
+      created_at: createdDate.toISOString(),
+      updated_at: createdDate.toISOString(),
     });
-
-    // Some users have progressed to P2
-    if (Math.random() > 0.1) {
-      const p2Date = new Date(aorDate.getTime() + (30 + Math.random() * 120) * 86400000);
-      if (p2Date <= now) {
-        entries.push({
-          id: `mock-p2-${i}`,
-          device_id: mockDeviceId,
-          entry_type: 'p2',
-          entry_date: formatDate(p2Date),
-          notes: generateNotes('p2'),
-          created_at: new Date(p2Date.getTime() - Math.random() * 86400000).toISOString(),
-        });
-
-        // Some users have progressed to ecoPR
-        if (Math.random() > 0.3) {
-          const ecoprDate = new Date(p2Date.getTime() + (60 + Math.random() * 180) * 86400000);
-          if (ecoprDate <= now) {
-            entries.push({
-              id: `mock-ecopr-${i}`,
-              device_id: mockDeviceId,
-              entry_type: 'ecopr',
-              entry_date: formatDate(ecoprDate),
-              notes: generateNotes('ecopr'),
-              created_at: new Date(ecoprDate.getTime() - Math.random() * 86400000).toISOString(),
-            });
-
-            // Some users have received PR card
-            if (Math.random() > 0.5) {
-              const prCardDate = new Date(
-                ecoprDate.getTime() + (30 + Math.random() * 90) * 86400000
-              );
-              if (prCardDate <= now) {
-                entries.push({
-                  id: `mock-pr-card-${i}`,
-                  device_id: mockDeviceId,
-                  entry_type: 'pr_card',
-                  entry_date: formatDate(prCardDate),
-                  notes: generateNotes('pr_card'),
-                  created_at: new Date(
-                    prCardDate.getTime() - Math.random() * 86400000
-                  ).toISOString(),
-                });
-              }
-            }
-          }
-        }
-      }
-    }
   }
 
-  return entries;
+  // Sort by created date, newest first
+  return entries.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 };
 
 /**
@@ -293,4 +259,144 @@ export const generateMockStatistics = (
  */
 export const loadMockStatisticsData = (transitionType?: string): CommunityStatistic[] => {
   return generateMockStatistics(transitionType);
+};
+
+/**
+ * Generates mock data for a user
+ * Similar to loadMockDataForCurrentDevice but uses userId instead
+ */
+export const loadMockDataForCurrentUser = (userId: string): TimelineEntry[] => {
+  // Use the same mock data structure as loadMockDataForCurrentDevice
+  // but replace device_id with user_id
+  const mockEntries: TimelineEntry[] = [
+    {
+      id: '1',
+      user_id: userId,
+      entry_type: 'submission',
+      entry_date: subDays(new Date(), 120).toISOString().split('T')[0],
+      notes: 'Submitted PR application through online portal',
+      created_at: subDays(new Date(), 120).toISOString(),
+      updated_at: subDays(new Date(), 120).toISOString(),
+    },
+    {
+      id: '2',
+      user_id: userId,
+      entry_type: 'aor',
+      entry_date: subDays(new Date(), 115).toISOString().split('T')[0],
+      notes: 'Received acknowledgment of receipt via email',
+      created_at: subDays(new Date(), 115).toISOString(),
+      updated_at: subDays(new Date(), 115).toISOString(),
+    },
+    {
+      id: '3',
+      user_id: userId,
+      entry_type: 'biometrics_request',
+      entry_date: subDays(new Date(), 100).toISOString().split('T')[0],
+      notes: 'Received request to complete biometrics',
+      created_at: subDays(new Date(), 100).toISOString(),
+      updated_at: subDays(new Date(), 100).toISOString(),
+    },
+    {
+      id: '4',
+      user_id: userId,
+      entry_type: 'biometrics_complete',
+      entry_date: subDays(new Date(), 95).toISOString().split('T')[0],
+      notes: 'Completed biometrics appointment at local office',
+      created_at: subDays(new Date(), 95).toISOString(),
+      updated_at: subDays(new Date(), 95).toISOString(),
+    },
+    {
+      id: '5',
+      user_id: userId,
+      entry_type: 'medicals_request',
+      entry_date: subDays(new Date(), 85).toISOString().split('T')[0],
+      notes: 'Requested to complete medical examination',
+      created_at: subDays(new Date(), 85).toISOString(),
+      updated_at: subDays(new Date(), 85).toISOString(),
+    },
+    {
+      id: '6',
+      user_id: userId,
+      entry_type: 'medicals_complete',
+      entry_date: subDays(new Date(), 80).toISOString().split('T')[0],
+      notes: 'Completed medical examination, results sent to IRCC',
+      created_at: subDays(new Date(), 80).toISOString(),
+      updated_at: subDays(new Date(), 80).toISOString(),
+    },
+    {
+      id: '7',
+      user_id: userId,
+      entry_type: 'background_start',
+      entry_date: subDays(new Date(), 65).toISOString().split('T')[0],
+      notes: 'Background check initiated',
+      created_at: subDays(new Date(), 65).toISOString(),
+      updated_at: subDays(new Date(), 65).toISOString(),
+    },
+    {
+      id: '8',
+      user_id: userId,
+      entry_type: 'background_complete',
+      entry_date: subDays(new Date(), 40).toISOString().split('T')[0],
+      notes: 'Background check completed successfully',
+      created_at: subDays(new Date(), 40).toISOString(),
+      updated_at: subDays(new Date(), 40).toISOString(),
+    },
+    {
+      id: '9',
+      user_id: userId,
+      entry_type: 'p1',
+      entry_date: subDays(new Date(), 30).toISOString().split('T')[0],
+      notes: 'Principal applicant granted access to online portal',
+      created_at: subDays(new Date(), 30).toISOString(),
+      updated_at: subDays(new Date(), 30).toISOString(),
+    },
+    {
+      id: '10',
+      user_id: userId,
+      entry_type: 'p2',
+      entry_date: subDays(new Date(), 28).toISOString().split('T')[0],
+      notes: 'Secondary applicant granted portal access',
+      created_at: subDays(new Date(), 28).toISOString(),
+      updated_at: subDays(new Date(), 28).toISOString(),
+    },
+  ];
+
+  return mockEntries;
+};
+
+/**
+ * Generate mock transition statistics for a user
+ * 
+ * @param transitionType - Optional transition type to focus on
+ * @returns TransitionStatistics object with mock data
+ */
+export const getMockTransitionStatistics = (transitionType?: string): TransitionStatistics => {
+  // Generate some random but realistic values
+  return {
+    submissionToAOR: Math.floor(Math.random() * 10) + 30,  // 30-40 days
+    aorToBiometrics: Math.floor(Math.random() * 20) + 40,  // 40-60 days
+    biometricsToMedicals: Math.floor(Math.random() * 15) + 10,  // 10-25 days
+    backgroundCheckDuration: Math.floor(Math.random() * 30) + 50,  // 50-80 days
+    totalProcessingTime: Math.floor(Math.random() * 100) + 200,  // 200-300 days
+    applicationProgress: Math.floor(Math.random() * 30) + 60,  // 60-90%
+    estimatedDaysRemaining: Math.floor(Math.random() * 50) + 50,  // 50-100 days
+    milestoneNotes: [
+      {
+        title: 'Submission → AOR',
+        description: 'Your application was processed faster than 60% of similar applications.',
+      },
+      {
+        title: 'Biometrics Processing',
+        description: 'Biometrics were processed within the expected timeframe.',
+      },
+      {
+        title: 'Medical Examination',
+        description: 'Medical results were confirmed quickly, faster than average.',
+      },
+      {
+        title: 'Background Check',
+        description: 'Your background check is progressing as expected for your profile.',
+      },
+    ]
+  };
 };

@@ -2,16 +2,27 @@ import { SUPABASE_ANON_KEY, SUPABASE_URL } from '@env';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
+import 'react-native-get-random-values';
 
 import './global.css';
-import { registerDeviceWithSupabase } from './src/lib/device-id';
+import { logger } from './src/lib/logger';
 import { supabase } from './src/lib/supabase';
 import { AppNavigator } from './src/navigation/app-navigator';
+import LoginScreen from './src/screens/login-screen';
+import { AuthState } from './src/types';
+
+// Constants
+const DEVICE_ID_KEY = 'device_id';
 
 export default function App() {
   const [initialized, setInitialized] = useState(false);
   const [deviceId, setDeviceId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [authState, setAuthState] = useState<AuthState>({
+    session: null,
+    user: null,
+  });
   const [envStatus, setEnvStatus] = useState<{
     supabaseUrl: boolean;
     supabaseKey: boolean;
@@ -34,10 +45,20 @@ export default function App() {
           throw new Error('Missing required environment variables');
         }
 
-        // Register device and get device ID
-        const id = await registerDeviceWithSupabase(supabase);
-        setDeviceId(id);
+        // Get the current session
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          logger.warn('Error getting session', { error: sessionError });
+        }
+        
+        setAuthState({ 
+          session, 
+          user: session?.user || null 
+        });
+        
         setInitialized(true);
+        setLoading(false);
       } catch (error) {
         console.error(
           'Error initializing app:',
@@ -52,13 +73,33 @@ export default function App() {
         }
 
         setInitialized(true); // Still mark as initialized to show error UI
+        setLoading(false);
       }
     };
 
     initializeApp();
+
+    // Set up auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setAuthState({
+          session,
+          user: session?.user || null,
+        });
+      }
+    );
+
+    // Clean up the subscription
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
-  if (!initialized) {
+  const handleLoginSuccess = () => {
+    logger.info('Login successful');
+  };
+
+  if (loading) {
     return (
       <View className="flex-1 items-center justify-center bg-white">
         <ActivityIndicator size="large" color="#0000ff" />
@@ -98,17 +139,23 @@ export default function App() {
     );
   }
 
-  if (!deviceId) {
+  // Show login screen if user is not authenticated
+  if (!authState.session) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
-        <Text>Failed to initialize device ID</Text>
-      </View>
+      <>
+        <LoginScreen 
+          onLoginSuccess={handleLoginSuccess} 
+          authState={authState} 
+          setAuthState={setAuthState} 
+        />
+        <StatusBar style="auto" />
+      </>
     );
   }
 
   return (
     <>
-      <AppNavigator deviceId={deviceId} />
+      <AppNavigator authState={authState} />
       <StatusBar style="auto" />
     </>
   );

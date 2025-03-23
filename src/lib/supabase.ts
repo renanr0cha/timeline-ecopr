@@ -27,19 +27,3 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     detectSessionInUrl: false,
   },
 });
-
-/**
- * Sets the device context in Supabase for Row Level Security
- */
-export const setDeviceContext = async (deviceId: string): Promise<void> => {
-  if (!supabaseUrl || !supabaseAnonKey) {
-    console.error('Cannot set device context: Supabase configuration is missing');
-    return;
-  }
-
-  try {
-    await supabase.rpc('set_device_context', { device_id: deviceId });
-  } catch (error) {
-    console.error('Failed to set device context:', error);
-  }
-};

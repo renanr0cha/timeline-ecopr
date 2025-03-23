@@ -1,603 +1,274 @@
 import { Ionicons } from '@expo/vector-icons';
-// Import DateTimePicker but provide a fallback for Expo Go
-// import DateTimePicker from '@react-native-community/datetimepicker';
-import { useNavigation } from '@react-navigation/native';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { format } from 'date-fns';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Animated, Easing, Modal, Text, TouchableOpacity, View } from 'react-native';
-import { MaskedTextInput } from 'react-native-mask-text';
-
-import { ScreenContent } from '../components/screen-content';
-import { SectionHeader } from '../components/section-header';
-import { ThemedButton } from '../components/themed-button';
-import { ThemedCard } from '../components/themed-card';
-import { ThemedInput } from '../components/themed-input';
+import {
+    ActivityIndicator,
+    Alert,
+    Keyboard,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
+} from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
+import { colors } from '../constants/colors';
 import { logger } from '../lib/logger';
+import { supabase } from '../lib/supabase';
 import { timelineService } from '../services/timeline-service';
-import { EntryType, RootStackParamList, TimelineEntry } from '../types';
+import { RootStackParamList } from '../types';
+import { getEntryTypeOptions, translateEntryType } from '../utils/entry-types';
 
-type AddEntryScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'AddEntry'>;
+type AddEntryScreenProps = {
+  route: RouteProp<RootStackParamList, 'AddEntry'>;
+  navigation: NativeStackNavigationProp<RootStackParamList, 'AddEntry'>;
+};
 
-interface AddEntryScreenProps {
-  route: {
-    params: {
-      deviceId: string;
-      entryType?: EntryType;
-      entryId?: string;
-      onComplete?: () => void;
-      existingEntries?: TimelineEntry[];
-    };
-  };
-}
+export const AddEntryScreen = ({ route, navigation }: AddEntryScreenProps) => {
+  const { entryToEdit, mode } = route.params || {};
+  const isEditMode = mode === 'edit' && entryToEdit;
 
-/**
- * Entry type options and display information
- */
-const ENTRY_TYPE_OPTIONS: {
-  value: EntryType;
-  label: string;
-  icon: string;
-  color: string;
-  description: string;
-}[] = [
-  {
-    value: 'submission',
-    label: 'Submission',
-    icon: 'paper-plane-outline',
-    color: 'bg-purple-500',
-    description: 'Application submission date',
-  },
-  {
-    value: 'aor',
-    label: 'AOR',
-    icon: 'document-text-outline',
-    color: 'bg-maple-red',
-    description: 'Acknowledgement of Receipt',
-  },
-  {
-    value: 'biometrics_request',
-    label: 'Biometrics Request',
-    icon: 'finger-print-outline',
-    color: 'bg-teal-500',
-    description: 'Biometrics request received',
-  },
-  {
-    value: 'biometrics_complete',
-    label: 'Biometrics Complete',
-    icon: 'checkmark-circle-outline',
-    color: 'bg-teal-600',
-    description: 'Biometrics appointment completed',
-  },
-  {
-    value: 'medicals_request',
-    label: 'Medicals Request',
-    icon: 'medical-outline',
-    color: 'bg-blue-500',
-    description: 'Medical examination request',
-  },
-  {
-    value: 'medicals_complete',
-    label: 'Medicals Complete',
-    icon: 'medkit-outline',
-    color: 'bg-blue-600',
-    description: 'Medical examination passed',
-  },
-  {
-    value: 'background_start',
-    label: 'Background Check',
-    icon: 'shield-outline',
-    color: 'bg-yellow-500',
-    description: 'Background check started',
-  },
-  {
-    value: 'background_complete',
-    label: 'Background Cleared',
-    icon: 'shield-checkmark-outline',
-    color: 'bg-yellow-600',
-    description: 'Background check completed',
-  },
-  {
-    value: 'additional_docs',
-    label: 'Additional Docs',
-    icon: 'folder-open-outline',
-    color: 'bg-orange-500',
-    description: 'Additional documents submitted',
-  },
-  {
-    value: 'p1',
-    label: 'P1',
-    icon: 'person-outline',
-    color: 'bg-hope-red',
-    description: 'Principal applicant portal access',
-  },
-  {
-    value: 'p2',
-    label: 'P2',
-    icon: 'people-outline',
-    color: 'bg-hope-red',
-    description: 'Secondary applicant portal access',
-  },
-  {
-    value: 'ecopr',
-    label: 'ecoPR',
-    icon: 'mail-outline',
-    color: 'bg-success',
-    description: 'Electronic Confirmation of PR',
-  },
-  {
-    value: 'pr_card',
-    label: 'PR Card',
-    icon: 'card-outline',
-    color: 'bg-waiting',
-    description: 'Permanent Resident Card received',
-  },
-];
-
-/**
- * Get the milestone sequence for determining next steps
- */
-const MILESTONE_SEQUENCE: EntryType[] = [
-  'submission', 
-  'aor', 
-  'biometrics_request',
-  'biometrics_complete',
-  'medicals_request',
-  'medicals_complete',
-  'background_start',
-  'background_complete',
-  'p1',
-  'p2', 
-  'ecopr', 
-  'pr_card'
-];
-
-/**
- * Screen for adding or editing a timeline entry
- * Enhanced with animations and improved UI
- */
-export default function AddEntryScreen({ route }: AddEntryScreenProps) {
-  const {
-    deviceId,
-    entryType: initialEntryType,
-    entryId,
-    onComplete,
-    existingEntries = [],
-  } = route.params;
-  const [entryType, setEntryType] = useState<EntryType>(initialEntryType || 'aor');
-  const [date, setDate] = useState(new Date());
-  const [dateText, setDateText] = useState('');
+  const [entryType, setEntryType] = useState(entryToEdit?.entry_type || '');
+  const [notes, setNotes] = useState(entryToEdit?.notes || '');
+  const [entryDate, setEntryDate] = useState(
+    entryToEdit?.entry_date ? new Date(entryToEdit.entry_date) : new Date()
+  );
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [notes, setNotes] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [showEntryTypeSelection, setShowEntryTypeSelection] = useState(false);
-  const navigation = useNavigation<AddEntryScreenNavigationProp>();
-
-  // Animation values
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
-
-  // Get the current progress to determine the next step
-  const getCurrentStepIndex = (): number => {
-    let completedIndex = -1;
-
-    MILESTONE_SEQUENCE.forEach((milestone, index) => {
-      if (existingEntries.some((entry) => entry.entry_type === milestone)) {
-        completedIndex = index;
-      }
-    });
-
-    return completedIndex;
-  };
-
-  // Determine the next milestone that needs to be added
-  const getNextMilestoneType = (): EntryType => {
-    const currentIndex = getCurrentStepIndex();
-    const nextIndex = currentIndex + 1;
-
-    // If we have next milestone, return it, otherwise default to first
-    return nextIndex < MILESTONE_SEQUENCE.length
-      ? MILESTONE_SEQUENCE[nextIndex]
-      : MILESTONE_SEQUENCE[0];
-  };
+  const [loading, setLoading] = useState(false);
+  const [typeMenuOpen, setTypeMenuOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+  
+  const notesInputRef = useRef<TextInput>(null);
+  const entryTypeOptions = getEntryTypeOptions();
 
   useEffect(() => {
-    // Run entry animations
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 500,
-        useNativeDriver: true,
-        easing: Easing.out(Easing.cubic),
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 600,
-        useNativeDriver: true,
-        easing: Easing.out(Easing.cubic),
-      }),
-    ]).start();
+    const keyboardDidShowListener = Keyboard.addListener(
+      'keyboardDidShow',
+      () => setKeyboardVisible(true)
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      'keyboardDidHide',
+      () => setKeyboardVisible(false)
+    );
 
-    // If no entry type is specified, but we have existing entries,
-    // automatically detect and use the next step
-    if (!initialEntryType && existingEntries.length > 0) {
-      const nextType = getNextMilestoneType();
-      setEntryType(nextType);
-    }
-
-    // Load entry data if editing
-    if (entryId) {
-      loadEntry();
-    } else {
-      // Set today's date as default
-      const today = new Date();
-      setDateText(formatDate(today));
-    }
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
   }, []);
 
-  /**
-   * Load entry data when editing an existing entry
-   */
-  const loadEntry = async () => {
-    try {
-      // Placeholder for loading existing entry data
-      // Would need to implement a getEntry method in the timelineService
-      setIsEditing(true);
-    } catch (error) {
-      logger.error('Error loading entry', { error });
-      Alert.alert('Error', 'Failed to load entry data');
-    }
-  };
-
-  /**
-   * Format date for display
-   */
-  const formatDate = (date: Date): string => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
-  /**
-   * Parse date string to Date object
-   */
-  const parseDate = (dateStr: string): Date | null => {
-    // Validate date format (YYYY-MM-DD)
-    const regex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!regex.test(dateStr)) return null;
-
-    const [year, month, day] = dateStr.split('-').map(Number);
-    const date = new Date(year, month - 1, day);
-
-    // Validate date (e.g., 2023-02-31 is invalid)
-    if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
-      return null;
-    }
-
-    return date;
-  };
-
-  /**
-   * Handle date text change and validate format
-   */
-  const handleDateTextChange = (text: string) => {
-    setDateText(text);
-    const parsedDate = parseDate(text);
-    if (parsedDate) {
-      setDate(parsedDate);
-    }
-  };
-
-  // Updated to work with our custom date picker
   const handleDateChange = (event: any, selectedDate?: Date) => {
     setShowDatePicker(false);
     if (selectedDate) {
-      setDate(selectedDate);
-      setDateText(formatDate(selectedDate));
+      setEntryDate(selectedDate);
     }
   };
-  
-  const handleCalendarPress = () => {
-    setShowDatePicker(true);
+
+  const validateForm = () => {
+    if (!entryType) {
+      Alert.alert('Missing Information', 'Please select an entry type');
+      return false;
+    }
+    return true;
   };
 
-  /**
-   * Submit the entry to the timeline service
-   */
   const handleSubmit = async () => {
-    // Validate date input
-    const parsedDate = parseDate(dateText);
-    if (!parsedDate) {
-      Alert.alert('Invalid Date', 'Please enter a valid date in YYYY-MM-DD format');
-      return;
-    }
+    if (!validateForm()) return;
 
-    // Check if date is in the future
-    if (parsedDate > new Date()) {
-      Alert.alert('Future Date', 'The date cannot be in the future');
-      return;
-    }
+    setLoading(true);
+    setError(null);
 
     try {
-      setSubmitting(true);
+      // Check if user is authenticated
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.user) {
+        setError('Authentication required. Please sign in to add entries.');
+        setLoading(false);
+        return;
+      }
 
-      if (isEditing && entryId) {
+      const entryData = {
+        entry_type: entryType,
+        entry_date: format(entryDate, 'yyyy-MM-dd'),
+        notes,
+      };
+
+      let result;
+      if (isEditMode && entryToEdit) {
         // Update existing entry
-        await timelineService.updateEntry(deviceId, entryId, {
-          entry_type: entryType,
-          entry_date: dateText,
-          notes,
-        });
+        result = await timelineService.updateEntry(entryToEdit.id, entryData);
+        if (result) {
+          logger.info('Timeline entry updated successfully', { entryId: entryToEdit.id });
+          navigation.goBack();
+        }
       } else {
         // Add new entry
-        await timelineService.addEntry(deviceId, entryType, dateText, notes);
+        result = await timelineService.addEntry(entryData);
+        if (result) {
+          logger.info('New timeline entry added successfully');
+          navigation.goBack();
+        }
       }
 
-      // Call the onComplete callback if provided
-      if (onComplete) {
-        onComplete();
+      if (!result) {
+        setError('Failed to save entry. Please try again.');
       }
-
-      navigation.goBack();
-    } catch (error) {
-      logger.error('Error submitting entry', { error });
-      Alert.alert('Error', 'There was a problem saving your entry. Please try again.');
+    } catch (err) {
+      logger.error('Error saving timeline entry', { error: err });
+      setError('An error occurred while saving your entry. Please try again.');
     } finally {
-      setSubmitting(false);
+      setLoading(false);
     }
   };
 
-  /**
-   * Get color for specific entry type
-   */
-  const getEntryTypeColor = (type: EntryType): string => {
-    const option = ENTRY_TYPE_OPTIONS.find((opt) => opt.value === type);
-    return option?.color || 'bg-gray-500';
-  };
-
-  // Helper function to generate date picker options
-  const generateDateOptions = () => {
-    const today = new Date();
-    const years = Array.from({ length: 5 }, (_, i) => today.getFullYear() - 2 + i);
-    const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
-    ];
-    const days = Array.from({ length: 31 }, (_, i) => i + 1);
+  const handleEntryTypeSelect = (type: string) => {
+    setEntryType(type);
+    setTypeMenuOpen(false);
     
-    return { years, months, days };
+    // Focus on notes input after selecting type
+    setTimeout(() => {
+      if (notesInputRef.current) {
+        notesInputRef.current.focus();
+      }
+    }, 100);
   };
 
   return (
-    <ScreenContent scrollable>
-      <Animated.View
-        style={{
-          opacity: fadeAnim,
-          transform: [{ translateY: slideAnim }],
-        }}
-        className="flex-1 py-6">
-        <SectionHeader
-          title={isEditing ? 'Edit Timeline Entry' : 'Add Timeline Entry'}
-          description="Record your PR journey milestones"
-          size="lg"
-          className="mb-6"
-        />
+    <LinearGradient
+      colors={[colors.bgGradientStart, colors.bgGradientEnd]}
+      className="flex-1"
+    >
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        className="flex-1"
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+      >
+        <ScrollView
+          className="flex-1 p-4"
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ flexGrow: 1 }}
+        >
+          <View className="bg-white rounded-lg p-5 shadow-sm mb-4">
+            <Text className="text-xl font-bold mb-1 text-gray-800">
+              {isEditMode ? 'Edit Timeline Entry' : 'Add Timeline Entry'}
+            </Text>
+            <Text className="text-gray-500 mb-4">
+              {isEditMode
+                ? 'Update information about this milestone'
+                : 'Record a new milestone in your journey'}
+            </Text>
 
-        <ThemedCard className="mb-6">
-          {/* Entry Type Selection */}
-          <View className="mb-4">
-            <Text className="text-text-primary mb-2 text-sm font-medium">Milestone Type</Text>
-            <TouchableOpacity
-              onPress={() => setShowEntryTypeSelection(!showEntryTypeSelection)}
-              className="border-frost bg-pure-white flex-row items-center justify-between rounded-lg border p-3">
-              <View className="flex-row items-center">
-                <View
-                  className={`mr-3 rounded-full p-2 ${ENTRY_TYPE_OPTIONS.find((opt) => opt.value === entryType)?.color}`}>
-                  <Ionicons
-                    name={ENTRY_TYPE_OPTIONS.find((opt) => opt.value === entryType)?.icon as any}
-                    size={20}
-                    color="#FFFFFF"
-                  />
+            {/* Entry Type Selector */}
+            <View className="mb-4">
+              <Text className="text-gray-700 mb-1 font-medium">Entry Type</Text>
+              <TouchableOpacity
+                onPress={() => setTypeMenuOpen(!typeMenuOpen)}
+                className="border border-gray-300 rounded-lg p-3 flex-row justify-between items-center bg-white"
+              >
+                <Text className={entryType ? "text-gray-800" : "text-gray-400"}>
+                  {entryType ? translateEntryType(entryType) : 'Select entry type'}
+                </Text>
+                <Ionicons
+                  name={typeMenuOpen ? "chevron-up" : "chevron-down"}
+                  size={16}
+                  color="#666"
+                />
+              </TouchableOpacity>
+
+              {/* Entry Type Dropdown Menu */}
+              {typeMenuOpen && (
+                <View className="border border-gray-300 rounded-lg mt-1 bg-white max-h-60 overflow-hidden">
+                  <ScrollView nestedScrollEnabled={true} className="max-h-60">
+                    {entryTypeOptions.map((option) => (
+                      <TouchableOpacity
+                        key={option.value}
+                        onPress={() => handleEntryTypeSelect(option.value)}
+                        className={`p-3 border-b border-gray-100 ${
+                          entryType === option.value ? "bg-gray-100" : ""
+                        }`}
+                      >
+                        <Text className="text-gray-800">{option.label}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
                 </View>
-                <View>
-                  <Text className="text-text-primary text-base font-medium">
-                    {ENTRY_TYPE_OPTIONS.find((opt) => opt.value === entryType)?.label}
-                  </Text>
-                  <Text className="text-text-secondary text-sm">
-                    {ENTRY_TYPE_OPTIONS.find((opt) => opt.value === entryType)?.description}
-                  </Text>
-                </View>
-              </View>
-              <Ionicons
-                name={showEntryTypeSelection ? 'chevron-up' : 'chevron-down'}
-                size={20}
-                color="#6C757D"
+              )}
+            </View>
+
+            {/* Date Picker */}
+            <View className="mb-4">
+              <Text className="text-gray-700 mb-1 font-medium">Date</Text>
+              <TouchableOpacity
+                onPress={() => setShowDatePicker(true)}
+                className="border border-gray-300 rounded-lg p-3 bg-white"
+              >
+                <Text className="text-gray-800">
+                  {format(entryDate, 'MMMM d, yyyy')}
+                </Text>
+              </TouchableOpacity>
+              {showDatePicker && (
+                <DateTimePicker
+                  value={entryDate}
+                  mode="date"
+                  display="default"
+                  onChange={handleDateChange}
+                  maximumDate={new Date()}
+                />
+              )}
+            </View>
+
+            {/* Notes */}
+            <View className="mb-4">
+              <Text className="text-gray-700 mb-1 font-medium">Notes</Text>
+              <TextInput
+                ref={notesInputRef}
+                value={notes}
+                onChangeText={setNotes}
+                placeholder="Add details about this milestone..."
+                multiline
+                className="border border-gray-300 rounded-lg p-3 min-h-[100px] bg-white text-gray-800"
+                textAlignVertical="top"
+                placeholderTextColor="#9ca3af"
               />
-            </TouchableOpacity>
+            </View>
 
-            {/* Entry Type Options */}
-            {showEntryTypeSelection && (
-              <View className="border-frost bg-pure-white mt-2 rounded-lg border">
-                {ENTRY_TYPE_OPTIONS.map((option, index) => (
-                  <TouchableOpacity
-                    key={option.value}
-                    onPress={() => {
-                      setEntryType(option.value);
-                      setShowEntryTypeSelection(false);
-                    }}
-                    className={`border-frost flex-row items-center p-3 ${
-                      index !== ENTRY_TYPE_OPTIONS.length - 1 ? 'border-b' : ''
-                    }`}>
-                    <View className={`mr-3 rounded-full p-2 ${option.color}`}>
-                      <Ionicons name={option.icon as any} size={20} color="#FFFFFF" />
-                    </View>
-                    <View>
-                      <Text className="text-text-primary text-base font-medium">
-                        {option.label}
-                      </Text>
-                      <Text className="text-text-secondary text-sm">{option.description}</Text>
-                    </View>
-                  </TouchableOpacity>
-                ))}
+            {/* Error message */}
+            {error && (
+              <View className="mb-4 p-3 bg-red-50 rounded-lg">
+                <Text className="text-red-600">{error}</Text>
               </View>
             )}
           </View>
 
-          {/* Date Input */}
-          <View className="mb-4">
-            <Text className="text-text-primary mb-2 text-sm font-medium">Date Received</Text>
-            <View className="flex-row items-center">
-              <View className="flex-1">
-                <MaskedTextInput
-                  mask="9999-99-99"
-                  onChangeText={handleDateTextChange}
-                  value={dateText}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor="#6C757D"
-                  keyboardType="numeric"
-                  className="border-frost bg-pure-white text-text-primary rounded-lg border px-4 text-base"
-                  style={{
-                    backgroundColor: '#FFFFFF',
-                    height: 56, // Match ThemedInput height
-                    fontSize: 16,
-                    paddingVertical: 16,
-                    paddingHorizontal: 16,
-                    borderRadius: 12,
-                    borderWidth: 1,
-                    borderColor: '#E0E0E0',
-                  }}
-                />
-              </View>
+          {/* Submit Button */}
+          {!isKeyboardVisible && (
+            <View className="mt-auto">
               <TouchableOpacity
-                onPress={handleCalendarPress}
-                className="border-frost bg-pure-white ml-2 rounded-lg border"
-                style={{ 
-                  height: 56, // Match the input height
-                  width: 56, 
-                  justifyContent: 'center', 
-                  alignItems: 'center' 
-                }}>
-                <Ionicons name="calendar-outline" size={24} color="#FF1E38" />
+                onPress={handleSubmit}
+                disabled={loading}
+                className={`rounded-lg p-4 ${
+                  loading ? "bg-gray-400" : "bg-maple-leaf"
+                } shadow-sm`}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#ffffff" />
+                ) : (
+                  <Text className="text-white font-bold text-center text-lg">
+                    {isEditMode ? 'Update Entry' : 'Add Entry'}
+                  </Text>
+                )}
               </TouchableOpacity>
             </View>
-          </View>
-
-          {/* Notes Input */}
-          <ThemedInput
-            label="Notes (Optional)"
-            value={notes}
-            onChangeText={setNotes}
-            placeholder="Add any additional details..."
-            multiline
-            numberOfLines={4}
-            className="h-24"
-          />
-        </ThemedCard>
-
-        {/* Action Buttons */}
-        <View className="flex-row justify-end space-x-3">
-          <ThemedButton variant="secondary" onPress={() => navigation.goBack()}>
-            Cancel
-          </ThemedButton>
-          <ThemedButton variant="primary" onPress={handleSubmit} loading={submitting}>
-            {isEditing ? 'Save Changes' : 'Add Entry'}
-          </ThemedButton>
-        </View>
-
-        {/* Date Picker Modal */}
-        {showDatePicker && (
-          <Modal
-            animationType="slide"
-            transparent={true}
-            visible={showDatePicker}
-            onRequestClose={() => setShowDatePicker(false)}
-          >
-            <View className="flex-1 justify-end bg-black/50">
-              <View className="bg-white rounded-t-xl p-4">
-                <View className="flex-row justify-between items-center mb-4">
-                  <ThemedButton 
-                    variant="secondary" 
-                    size="sm"
-                    onPress={() => setShowDatePicker(false)}
-                  >
-                    Cancel
-                  </ThemedButton>
-                  <Text className="text-lg font-medium">Select Date</Text>
-                  <ThemedButton 
-                    variant="primary" 
-                    size="sm"
-                    onPress={() => {
-                      setShowDatePicker(false);
-                    }}
-                  >
-                    Done
-                  </ThemedButton>
-                </View>
-                
-                <View className="flex-row justify-evenly">
-                  {/* Simple date selection with buttons */}
-                  <View className="items-center">
-                    <Text className="text-sm text-gray-500 mb-2">Month</Text>
-                    {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((month, index) => (
-                      <TouchableOpacity
-                        key={month}
-                        className={`py-2 px-4 my-1 rounded ${date.getMonth() === index ? 'bg-red-500' : 'bg-gray-200'}`}
-                        onPress={() => {
-                          const newDate = new Date(date);
-                          newDate.setMonth(index);
-                          setDate(newDate);
-                          setDateText(formatDate(newDate));
-                        }}
-                      >
-                        <Text className={date.getMonth() === index ? 'text-white' : 'text-black'}>{month}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                  
-                  <View className="items-center">
-                    <Text className="text-sm text-gray-500 mb-2">Day</Text>
-                    <View className="flex-row flex-wrap justify-center" style={{ width: 160 }}>
-                      {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
-                        <TouchableOpacity
-                          key={day}
-                          className={`py-2 px-3 m-1 rounded ${date.getDate() === day ? 'bg-red-500' : 'bg-gray-200'}`}
-                          onPress={() => {
-                            const newDate = new Date(date);
-                            newDate.setDate(day);
-                            setDate(newDate);
-                            setDateText(formatDate(newDate));
-                          }}
-                        >
-                          <Text className={date.getDate() === day ? 'text-white' : 'text-black'}>{day}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </View>
-                  
-                  <View className="items-center">
-                    <Text className="text-sm text-gray-500 mb-2">Year</Text>
-                    {[2022, 2023, 2024, 2025].map((year) => (
-                      <TouchableOpacity
-                        key={year}
-                        className={`py-2 px-4 my-1 rounded ${date.getFullYear() === year ? 'bg-red-500' : 'bg-gray-200'}`}
-                        onPress={() => {
-                          const newDate = new Date(date);
-                          newDate.setFullYear(year);
-                          setDate(newDate);
-                          setDateText(formatDate(newDate));
-                        }}
-                      >
-                        <Text className={date.getFullYear() === year ? 'text-white' : 'text-black'}>{year}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-              </View>
-            </View>
-          </Modal>
-        )}
-      </Animated.View>
-    </ScreenContent>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </LinearGradient>
   );
-}
+};
