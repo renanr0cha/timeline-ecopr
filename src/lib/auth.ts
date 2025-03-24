@@ -1,21 +1,6 @@
-import { betterAuth } from 'better-auth';
-
 import { AuthState } from '../types';
 import { logger } from './logger';
 import { supabase } from './supabase';
-
-/**
- * Configure BetterAuth with Supabase integration
- */
-export const auth = betterAuth({
-  supabase,
-  logger: {
-    debug: logger.debug,
-    info: logger.info,
-    warn: logger.warn,
-    error: logger.error
-  },
-});
 
 /**
  * Sign up a new user with email and password
@@ -130,12 +115,14 @@ export const getAuthState = async (): Promise<AuthState> => {
       return { session: null, user: null };
     }
 
-    const mappedSession = session ? {
-      access_token: session.access_token,
-      refresh_token: session.refresh_token,
-      expires_at: session.expires_at || 0,
-      user: session.user
-    } : null;
+    const mappedSession = session
+      ? {
+          access_token: session.access_token,
+          refresh_token: session.refresh_token,
+          expires_at: session.expires_at || 0,
+          user: session.user,
+        }
+      : null;
 
     return {
       session: mappedSession,
