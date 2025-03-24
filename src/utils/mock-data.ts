@@ -1,80 +1,13 @@
 import { format, subDays } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
-import { CommunityStatistic, EntryType, TimelineEntry, WeeklyBreakdown } from '../types';
 
-/**
- * Generates a random date between start and end date
- *
- * @param start - Start date
- * @param end - End date
- * @returns Random date between start and end
- */
-const randomDate = (start: Date, end: Date): Date => {
-  const diff = end.getTime() - start.getTime();
-  const newDiff = Math.random() * diff;
-  const date = new Date(start.getTime() + newDiff);
-  return date;
-};
-
-/**
- * Format date to ISO string (YYYY-MM-DD)
- *
- * @param date - Date to format
- * @returns Formatted date string
- */
-const formatDate = (date: Date): string => {
-  return date.toISOString().split('T')[0];
-};
-
-/**
- * Generates random notes for timeline entries
- *
- * @param entryType - Type of entry
- * @returns Random notes relevant to the entry type
- */
-const generateNotes = (entryType: EntryType): string => {
-  const notesOptions = {
-    aor: [
-      'Application submitted online',
-      'Received confirmation email from IRCC',
-      'Application fee paid: $1,325',
-      'Included all required documents',
-      'Used the new IRCC portal',
-      'Medical exam completed before submission',
-      'Police certificate included from home country',
-    ],
-    p2: [
-      'Portal access granted',
-      'Biometrics appointment scheduled',
-      'Additional documents requested',
-      'Medical results updated',
-      'Status changed to "in progress"',
-      'Background check completed',
-      'Employment verification received',
-    ],
-    ecopr: [
-      'Received passport request',
-      'COPR document arrived',
-      'Landing date scheduled',
-      'Completed landing process',
-      'Proof of residence submitted',
-      'Confirmation of PR status in system',
-      'SIN number application completed',
-    ],
-    pr_card: [
-      'PR card production in progress',
-      'Card shipped via Canada Post',
-      'Tracking number received',
-      'Card delivered to address',
-      'Activated online account',
-      'Received welcome package',
-      'Updated address with IRCC',
-    ],
-  };
-
-  const options = notesOptions[entryType];
-  return options[Math.floor(Math.random() * options.length)];
-};
+import {
+  CommunityStatistic,
+  EntryType,
+  TimelineEntry,
+  TransitionStatistics,
+  WeeklyBreakdown,
+} from '../types';
 
 /**
  * Generate a set of mock timeline entries for testing
@@ -82,10 +15,7 @@ const generateNotes = (entryType: EntryType): string => {
  * @param count - Number of entries to generate
  * @returns Array of mock timeline entries
  */
-export const generateMockTimelineEntries = (
-  userId: string,
-  count = 10
-): TimelineEntry[] => {
+export const generateMockTimelineEntries = (userId: string, count = 10): TimelineEntry[] => {
   const entries: TimelineEntry[] = [];
   const entryTypes: EntryType[] = [
     'submission',
@@ -121,7 +51,11 @@ export const generateMockTimelineEntries = (
   }
 
   // Sort by created date, newest first
-  return entries.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  return entries.sort(
+    (a, b) =>
+      new Date(b.created_at || new Date()).getTime() -
+      new Date(a.created_at || new Date()).getTime()
+  );
 };
 
 /**
@@ -133,21 +67,19 @@ export const generateMockTimelineEntries = (
 export const loadMockDataForCurrentDevice = (deviceId: string): TimelineEntry[] => {
   // Generate mock data for multiple devices, but only return entries for current device
   const allEntries = generateMockTimelineEntries(deviceId, 50);
-  return allEntries.filter((entry) => entry.device_id === deviceId);
+  return allEntries.filter((entry) => entry.user_id === deviceId);
 };
 
 /**
  * Generates mock statistics data for the community statistics screen
- * 
+ *
  * @param transitionType - Optional transition type filter
  * @returns Array of mock community statistics
  */
-export const generateMockStatistics = (
-  transitionType?: string
-): CommunityStatistic[] => {
+export const generateMockStatistics = (transitionType?: string): CommunityStatistic[] => {
   const stats: CommunityStatistic[] = [];
   const now = new Date();
-  
+
   // Generate monthly data for the past 12 months
   for (let i = 0; i < 12; i++) {
     const month = new Date(now.getFullYear(), now.getMonth() - i, 1);
@@ -155,23 +87,23 @@ export const generateMockStatistics = (
       month: 'short',
       year: 'numeric',
     });
-    
+
     // Generate statistics for each transition type
     const transitionTypes = ['aor-p2', 'p2-ecopr', 'ecopr-pr_card'];
-    
+
     for (const type of transitionTypes) {
       // Skip if filtering by type and this isn't the requested type
       if (transitionType && type !== transitionType) continue;
-      
+
       // Create realistic-looking data with a trend
       // More recent months have higher counts (growing community)
       const count = Math.max(5, Math.floor(30 - i * 2 + Math.random() * 10));
-      
+
       // Generate realistic processing times
       let avgDays = 0;
       let minDays = 0;
       let maxDays = 0;
-      
+
       switch (type) {
         case 'aor-p2':
           // AOR to P2 typically takes 30-90 days
@@ -192,19 +124,20 @@ export const generateMockStatistics = (
           maxDays = avgDays + 40 + Math.floor(Math.random() * 20);
           break;
       }
-      
+
       // Create statistics with waiting counts for the P2-ecoPR transition
-      const waitingCount = type === 'p2-ecopr' ? count * 3 + Math.floor(Math.random() * 10) : undefined;
-      
+      const waitingCount =
+        type === 'p2-ecopr' ? count * 3 + Math.floor(Math.random() * 10) : undefined;
+
       // Create weekly breakdown data for P2-ecoPR transition (for detailed view)
       const weekBreakdown: WeeklyBreakdown[] = [];
-      
+
       if (type === 'p2-ecopr') {
         // Generate 4 weeks of data with realistic distribution
         const totalCount = waitingCount || count;
         const weeksInMonth = 4;
         let remainingCount = totalCount;
-        
+
         for (let w = 0; w < weeksInMonth; w++) {
           // Distribute the count across weeks, with randomness
           // Last week gets the remainder
@@ -214,46 +147,49 @@ export const generateMockStatistics = (
           } else {
             // Each week gets roughly proportional amount with some randomness
             const proportion = 1 / (weeksInMonth - w);
-            weekCount = Math.max(1, Math.floor(remainingCount * proportion * (0.7 + Math.random() * 0.6)));
+            weekCount = Math.max(
+              1,
+              Math.floor(remainingCount * proportion * (0.7 + Math.random() * 0.6))
+            );
             weekCount = Math.min(weekCount, remainingCount - 1);
           }
-          
+
           remainingCount -= weekCount;
-          
+
           // Use high values for some weeks to simulate "full" bars
           if (i === 0 && w === 1) {
             weekCount = 25; // High value for a specific week to show a full bar
           }
-          
+
           const weekStart = w * 7 + 1;
           const weekEnd = Math.min((w + 1) * 7, 31); // Cap at month end
-          
+
           weekBreakdown.push({
             week_range: `${monthYear} ${weekStart}-${weekEnd}`,
-            count: weekCount
+            count: weekCount,
           });
         }
       }
-      
+
       stats.push({
         transition_type: type,
         avg_days: avgDays,
         min_days: minDays,
         max_days: maxDays,
-        count: count,
+        count,
         month_year: monthYear,
         waiting_count: waitingCount,
-        week_breakdown: type === 'p2-ecopr' ? weekBreakdown : undefined
+        week_breakdown: type === 'p2-ecopr' ? weekBreakdown : undefined,
       });
     }
   }
-  
+
   return stats;
 };
 
 /**
  * Load mock statistics data
- * 
+ *
  * @param transitionType - Optional transition type filter
  * @returns Mock community statistics
  */
@@ -366,20 +302,20 @@ export const loadMockDataForCurrentUser = (userId: string): TimelineEntry[] => {
 
 /**
  * Generate mock transition statistics for a user
- * 
+ *
  * @param transitionType - Optional transition type to focus on
  * @returns TransitionStatistics object with mock data
  */
 export const getMockTransitionStatistics = (transitionType?: string): TransitionStatistics => {
   // Generate some random but realistic values
   return {
-    submissionToAOR: Math.floor(Math.random() * 10) + 30,  // 30-40 days
-    aorToBiometrics: Math.floor(Math.random() * 20) + 40,  // 40-60 days
-    biometricsToMedicals: Math.floor(Math.random() * 15) + 10,  // 10-25 days
-    backgroundCheckDuration: Math.floor(Math.random() * 30) + 50,  // 50-80 days
-    totalProcessingTime: Math.floor(Math.random() * 100) + 200,  // 200-300 days
-    applicationProgress: Math.floor(Math.random() * 30) + 60,  // 60-90%
-    estimatedDaysRemaining: Math.floor(Math.random() * 50) + 50,  // 50-100 days
+    submissionToAOR: Math.floor(Math.random() * 10) + 30, // 30-40 days
+    aorToBiometrics: Math.floor(Math.random() * 20) + 40, // 40-60 days
+    biometricsToMedicals: Math.floor(Math.random() * 15) + 10, // 10-25 days
+    backgroundCheckDuration: Math.floor(Math.random() * 30) + 50, // 50-80 days
+    totalProcessingTime: Math.floor(Math.random() * 100) + 200, // 200-300 days
+    applicationProgress: Math.floor(Math.random() * 30) + 60, // 60-90%
+    estimatedDaysRemaining: Math.floor(Math.random() * 50) + 50, // 50-100 days
     milestoneNotes: [
       {
         title: 'Submission → AOR',
@@ -397,6 +333,6 @@ export const getMockTransitionStatistics = (transitionType?: string): Transition
         title: 'Background Check',
         description: 'Your background check is progressing as expected for your profile.',
       },
-    ]
+    ],
   };
 };
