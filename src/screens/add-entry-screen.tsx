@@ -142,43 +142,25 @@ const ENTRY_TYPE_OPTIONS: {
 ];
 
 /**
- * Get the milestone sequence for determining next steps
- */
-const MILESTONE_SEQUENCE: EntryType[] = [
-  'submission',
-  'aor',
-  'biometrics_request',
-  'biometrics_complete',
-  'medicals_request',
-  'medicals_complete',
-  'background_start',
-  'background_complete',
-  'p1',
-  'p2',
-  'ecopr',
-  'pr_card',
-];
-
-/**
  * Screen for adding or editing a timeline entry
  * Enhanced with animations and improved UI
  */
 export default function AddEntryScreen({ route }: AddEntryScreenProps) {
-  const { 
-    entryType: initialEntryType, 
-    entryId, 
-    onComplete, 
+  const {
+    entryType: initialEntryType,
+    entryId,
+    onComplete,
     existingEntries = [],
-    mode = 'create'  // Default to create mode if not specified
+    mode = 'create', // Default to create mode if not specified
   } = route.params;
-  
+
   const [entryType, setEntryType] = useState<EntryType>(initialEntryType || 'aor');
   const [date, setDate] = useState(new Date());
   const [dateText, setDateText] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [isEditing, setIsEditing] = useState(mode === 'edit');  // Set based on mode parameter
+  const [isEditing] = useState(mode === 'edit'); // Set based on mode parameter
   const [showEntryTypeSelection, setShowEntryTypeSelection] = useState(false);
   const navigation = useNavigation<AddEntryScreenNavigationProp>();
 
@@ -186,46 +168,22 @@ export default function AddEntryScreen({ route }: AddEntryScreenProps) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
 
-  // Get the current progress to determine the next step
-  const getCurrentStepIndex = (): number => {
-    let completedIndex = -1;
-
-    MILESTONE_SEQUENCE.forEach((milestone, index) => {
-      if (existingEntries.some((entry) => entry.entry_type === milestone)) {
-        completedIndex = index;
-      }
-    });
-
-    return completedIndex;
-  };
-
-  // Determine the next milestone that needs to be added
-  const getNextMilestoneType = (): EntryType => {
-    const currentIndex = getCurrentStepIndex();
-    const nextIndex = currentIndex + 1;
-
-    // If we have next milestone, return it, otherwise default to first
-    return nextIndex < MILESTONE_SEQUENCE.length
-      ? MILESTONE_SEQUENCE[nextIndex]
-      : MILESTONE_SEQUENCE[0];
-  };
-
   /**
    * Load entry data for editing
    */
   const loadEntry = async () => {
     if (!isEditing || !entryId) return;
-    
+
     try {
       setSubmitting(true);
-      
+
       // Check if we have the entry data in existingEntries
-      const existingEntry = existingEntries.find(entry => entry.id === entryId);
-      
+      const existingEntry = existingEntries.find((entry) => entry.id === entryId);
+
       if (existingEntry) {
         // Use existing entry data
         setEntryType(existingEntry.entry_type);
-        
+
         if (existingEntry.entry_date) {
           const parsedDate = new Date(existingEntry.entry_date);
           if (!isNaN(parsedDate.getTime())) {
@@ -233,7 +191,7 @@ export default function AddEntryScreen({ route }: AddEntryScreenProps) {
             setDateText(formatDate(parsedDate));
           }
         }
-        
+
         if (existingEntry.notes) {
           setNotes(existingEntry.notes);
         }
@@ -254,6 +212,11 @@ export default function AddEntryScreen({ route }: AddEntryScreenProps) {
 
   // Use effect to set up the screen based on mode
   useEffect(() => {
+    // Hide the navigation header
+    navigation.setOptions({
+      headerShown: false,
+    });
+    
     // Run entrance animations
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -269,7 +232,7 @@ export default function AddEntryScreen({ route }: AddEntryScreenProps) {
         easing: Easing.out(Easing.cubic),
       }),
     ]).start();
-    
+
     // Load entry data when in edit mode
     if (isEditing) {
       loadEntry();
@@ -279,7 +242,7 @@ export default function AddEntryScreen({ route }: AddEntryScreenProps) {
       setDate(today);
       setDateText(formatDate(today));
     }
-  }, [isEditing, entryId]);
+  }, [isEditing, entryId, navigation]);
 
   /**
    * Format date for display
@@ -518,7 +481,7 @@ export default function AddEntryScreen({ route }: AddEntryScreenProps) {
         </ThemedCard>
 
         {/* Action Buttons */}
-        <View className="flex-row justify-end space-x-3">
+        <View className="w-full flex-row justify-end gap-4 space-x-3">
           <ThemedButton variant="secondary" onPress={() => navigation.goBack()}>
             Cancel
           </ThemedButton>

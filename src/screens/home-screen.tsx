@@ -1,14 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Animated, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Text, TouchableOpacity, View } from 'react-native';
 
 import { ProgressSummary } from '../components/progress-summary';
 import { ScreenContent } from '../components/screen-content';
 import { SectionHeader } from '../components/section-header';
 import { ThemedButton } from '../components/themed-button';
 import { ThemedCard } from '../components/themed-card';
-import { TimelineView } from '../components/timeline-view';
 import { colors } from '../constants/colors';
 import { signOut } from '../lib/auth';
 import { logger } from '../lib/logger';
@@ -31,11 +30,6 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   const [useMockData, setUseMockData] = useState(false);
   const [showAddNextStepPrompt, setShowAddNextStepPrompt] = useState(false);
   const [nextStepType, setNextStepType] = useState<EntryType | null>(null);
-  const [timelineExpanded, setTimelineExpanded] = useState(false);
-
-  // Animation for timeline section
-  const rotateAnim = useState(new Animated.Value(0))[0];
-  const contentHeight = useState(new Animated.Value(0))[0];
 
   /**
    * Load timeline entries from the service or mock data
@@ -154,40 +148,6 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     }
   };
 
-  /**
-   * Navigate to the statistics screen
-   */
-  const goToStatistics = () => {
-    navigation.navigate('StatisticsTab');
-  };
-
-  /**
-   * Toggle timeline section expansion
-   */
-  const toggleTimelineExpanded = () => {
-    const newValue = !timelineExpanded;
-    setTimelineExpanded(newValue);
-
-    Animated.parallel([
-      Animated.timing(rotateAnim, {
-        toValue: newValue ? 1 : 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(contentHeight, {
-        toValue: newValue ? 1 : 0,
-        duration: 300,
-        useNativeDriver: false,
-      }),
-    ]).start();
-  };
-
-  // Rotate interpolation for the chevron icon
-  const rotate = rotateAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '180deg'],
-  });
-
   // Check if user has entries
   const hasEntries = entries.length > 0;
 
@@ -244,31 +204,6 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
               onEditEntry={handleEditEntry}
               emptyState={!hasEntries}
             />
-            {/* Collapsible Timeline Section */}
-            {hasEntries && (
-              <ThemedCard className="mb-6" variant="default">
-                {/* Timeline Header with Toggle */}
-                <TouchableOpacity
-                  onPress={toggleTimelineExpanded}
-                  className="flex-row items-center justify-between">
-                  <SectionHeader
-                    title="Journey History"
-                    description="View your milestone timeline"
-                    className="mb-0 flex-1"
-                  />
-                  <Animated.View style={{ transform: [{ rotate }] }}>
-                    <Ionicons name="chevron-down" size={24} color={colors.text.secondary} />
-                  </Animated.View>
-                </TouchableOpacity>
-
-                {/* Timeline Content */}
-                {timelineExpanded && (
-                  <View className="mt-4">
-                    <TimelineView entries={entries} />
-                  </View>
-                )}
-              </ThemedCard>
-            )}
 
             {/* Add Next Step Prompt */}
             {showAddNextStepPrompt && nextStepType && (
@@ -293,21 +228,6 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                 </View>
               </ThemedCard>
             )}
-
-            {/* Statistics Card */}
-            <TouchableOpacity onPress={goToStatistics} className="mb-6">
-              <ThemedCard variant="elevated">
-                <View className="flex-row items-center justify-between">
-                  <View className="flex-1">
-                    <Text className="text-lg font-bold text-text-primary">Community Insights</Text>
-                    <Text className="text-text-secondary">See how your timeline compares</Text>
-                  </View>
-                  <View className="rounded-full bg-maple-red/10 p-2">
-                    <Ionicons name="bar-chart-outline" size={24} color={colors.maple.red} />
-                  </View>
-                </View>
-              </ThemedCard>
-            </TouchableOpacity>
           </>
         )}
       </View>

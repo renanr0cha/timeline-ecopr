@@ -3,6 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Text, TouchableOpacity, View } from 'react-native';
 
+import { colors } from '../constants/colors';
 import {
   ENTRY_TYPE_ICONS,
   getDaysAgo,
@@ -11,7 +12,6 @@ import {
 } from '../constants/milestone-utils';
 import { EntryType, TimelineEntry } from '../types';
 import { ThemedCard } from './themed-card';
-
 // Constants for consistent layout
 const DOT_SIZE = 36;
 const CONNECTOR_WIDTH = 2;
@@ -39,6 +39,11 @@ export const ProgressSummary = ({
   const progressWidth = useRef(new Animated.Value(0)).current;
   const fadeIn = useRef(new Animated.Value(0)).current;
   const scaleInOut = useRef(new Animated.Value(0.95)).current;
+
+  // Animation values for edit mode
+  const editButtonScale = useRef(new Animated.Value(0)).current;
+  const editButtonOpacity = useRef(new Animated.Value(0)).current;
+  const editToggleRotate = useRef(new Animated.Value(0)).current;
 
   // Edit mode state
   const [editMode, setEditMode] = useState(false);
@@ -251,10 +256,37 @@ export const ProgressSummary = ({
     return 'Congratulations on completing your PR journey!';
   };
 
-  // Toggle edit mode
+  // Toggle edit mode with animations
   const toggleEditMode = () => {
-    setEditMode((prev) => !prev);
+    const newEditMode = !editMode;
+    setEditMode(newEditMode);
+
+    // Animate the edit buttons
+    Animated.parallel([
+      Animated.timing(editButtonOpacity, {
+        toValue: newEditMode ? 1 : 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.spring(editButtonScale, {
+        toValue: newEditMode ? 1 : 0,
+        friction: 8,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(editToggleRotate, {
+        toValue: newEditMode ? 1 : 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
   };
+
+  // Rotation interpolation for the toggle button icon
+  const rotateAnimation = editToggleRotate.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '180deg'],
+  });
 
   // Check if a milestone entry exists and can be edited
   const canEditMilestone = (milestone: EntryType): boolean => {
@@ -463,10 +495,10 @@ export const ProgressSummary = ({
                             {/* Days ago counter - only show for completed milestones with a date */}
                             {isCompleted && milestoneDate && !editMode && (
                               <View className="min-w-[45px] items-center pl-2">
-                                <Text className="text-lg font-bold leading-[22px] text-[#94a3b8]">
+                                <Text className="text-primary text-lg font-bold leading-[20px]">
                                   {daysAgo}
                                 </Text>
-                                <Text className="text-[10px] leading-[14px] text-[#94a3b8]">
+                                <Text className="text-secondary text-[8px] leading-[10px]">
                                   {daysAgo === 1 ? 'day ago' : 'days ago'}
                                 </Text>
                               </View>
@@ -474,30 +506,34 @@ export const ProgressSummary = ({
 
                             {/* Edit button - only show in edit mode for completed milestones */}
                             {editMode && canEditMilestone(milestone) && entry && (
-                              <TouchableOpacity
-                                onPress={() => handleEditEntry(entry)}
-                                className="elevation-3 shadow-md shadow-[#3b82f6]/20">
-                                <View className="overflow-hidden rounded-2xl">
-                                  <LinearGradient
-                                    colors={['#3b82f6', '#2563eb']}
+                              <Animated.View
+                                style={{
+                                  opacity: editButtonOpacity,
+                                  transform: [{ scale: editButtonScale }],
+                                }}>
+                                <TouchableOpacity
+                                  onPress={() => handleEditEntry(entry)}
+                                  className="elevation-1">
+                                  <View
+                                    className="flex-row items-center rounded-2xl border-[1px] border-maple-red bg-transparent px-3 py-1.5"
                                     style={{
-                                      flexDirection: 'row',
-                                      alignItems: 'center',
-                                      paddingHorizontal: 12,
-                                      paddingVertical: 6,
-                                      shadowColor: '#3b82f6',
-                                      shadowOpacity: 0.2,
-                                      shadowOffset: { width: 0, height: 2 },
-                                      shadowRadius: 3,
-                                      elevation: 3,
+                                      shadowColor: colors.maple.red,
+                                      shadowOpacity: 0.1,
+                                      shadowOffset: { width: 0, height: 1 },
+                                      shadowRadius: 2,
+                                      elevation: 1,
                                     }}>
-                                    <Ionicons name="pencil-outline" size={16} color="#FFFFFF" />
-                                    <Text className="ml-1 text-sm font-medium text-white">
+                                    <Ionicons
+                                      name="pencil-outline"
+                                      size={16}
+                                      color={colors.maple.red}
+                                    />
+                                    <Text className="ml-1 text-sm font-medium text-maple-red">
                                       Edit
                                     </Text>
-                                  </LinearGradient>
-                                </View>
-                              </TouchableOpacity>
+                                  </View>
+                                </TouchableOpacity>
+                              </Animated.View>
                             )}
 
                             {/* Add button for the next milestone */}
@@ -556,24 +592,26 @@ export const ProgressSummary = ({
         {/* Edit mode toggle button at the bottom - alternative way to toggle edit mode */}
         {entries.length > 0 && onEditEntry && (
           <TouchableOpacity onPress={toggleEditMode} className="mt-4 self-center">
-            <LinearGradient
-              colors={editMode ? ['#64748b', '#475569'] : ['#3b82f6', '#2563eb']}
+            <View
+              className={`flex-row items-center rounded-2xl border-[1.5px] border-maple-red ${editMode ? 'bg-maple-red/5' : 'bg-white'} px-4 py-2 shadow-sm`}
               style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                paddingHorizontal: 16,
-                paddingVertical: 8,
-                borderRadius: 12,
+                shadowColor: colors.maple.red,
+                shadowOpacity: 0.1,
+                shadowOffset: { width: 0, height: 1 },
+                shadowRadius: 2,
+                elevation: 1,
               }}>
-              <Ionicons
-                name={editMode ? 'close-outline' : 'pencil-outline'}
-                size={18}
-                color="#FFFFFF"
-              />
-              <Text className="ml-2 text-sm font-medium text-white">
+              <Animated.View style={{ transform: [{ rotate: rotateAnimation }] }}>
+                <Ionicons
+                  name={editMode ? 'close-outline' : 'pencil-outline'}
+                  size={18}
+                  color={colors.maple.red}
+                />
+              </Animated.View>
+              <Text className="ml-2 text-sm font-medium text-maple-red">
                 {editMode ? 'Exit Edit Mode' : 'Edit Milestones'}
               </Text>
-            </LinearGradient>
+            </View>
           </TouchableOpacity>
         )}
       </ThemedCard>
