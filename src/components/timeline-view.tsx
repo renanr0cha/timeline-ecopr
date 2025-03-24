@@ -1,311 +1,320 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect } from 'react';
-import { Animated, Easing, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useRef } from 'react';
+import { Animated, Text, TouchableOpacity, View } from 'react-native';
 
+import { ENTRY_TYPE_ICONS, getDaysAgo, getMilestoneGradient, getMilestoneName } from '../constants/milestone-utils';
 import { EntryType, TimelineEntry } from '../types';
 
 interface TimelineViewProps {
   entries: TimelineEntry[];
-  onEntryPress?: (entry: TimelineEntry) => void;
+  onAddEntry?: (entryType: EntryType) => void;
 }
 
-// Map entry types to their icon names
-const ENTRY_TYPE_ICONS: Record<EntryType, keyof typeof Ionicons.glyphMap> = {
-  'submission': 'paper-plane-outline',
-  'aor': 'document-text-outline',
-  'biometrics_request': 'finger-print-outline',
-  'biometrics_complete': 'checkmark-circle-outline',
-  'medicals_request': 'medical-outline',
-  'medicals_complete': 'medkit-outline',
-  'background_start': 'shield-outline',
-  'background_complete': 'shield-checkmark-outline',
-  'additional_docs': 'folder-open-outline',
-  'p1': 'person-outline',
-  'p2': 'people-outline',
-  'ecopr': 'mail-outline',
-  'pr_card': 'card-outline'
-};
-
-// Get gradient colors for milestone type
-const getMilestoneGradient = (entryType: string): string[] => {
-  switch (entryType) {
-    case 'submission':
-      return ['#9333ea', '#a855f7']; // purple gradient
-    case 'aor':
-      return ['#e11e38', '#ef4444']; // maple red gradient
-    case 'biometrics_request':
-      return ['#0d9488', '#14b8a6']; // teal gradient
-    case 'biometrics_complete':
-      return ['#0d9488', '#0f766e']; // dark teal gradient
-    case 'medicals_request':
-      return ['#3b82f6', '#60a5fa']; // blue gradient
-    case 'medicals_complete':
-      return ['#2563eb', '#3b82f6']; // darker blue gradient
-    case 'background_start':
-      return ['#eab308', '#facc15']; // yellow gradient
-    case 'background_complete':
-      return ['#ca8a04', '#eab308']; // darker yellow gradient
-    case 'additional_docs':
-      return ['#f97316', '#fb923c']; // orange gradient
-    case 'p1':
-      return ['#dc2626', '#ef4444']; // hope red gradient
-    case 'p2':
-      return ['#dc2626', '#b91c1c']; // darker hope red gradient
-    case 'ecopr':
-      return ['#22c55e', '#4ade80']; // success gradient
-    case 'pr_card':
-      return ['#f59e0b', '#fbbf24']; // waiting/amber gradient
-    default:
-      return ['#6b7280', '#9ca3af']; // gray gradient
-  }
-};
-
 /**
- * Timeline component that displays entries in a vertically connected timeline
- * Includes animation effects for a modern and visually appealing UI
+ * Timeline view component that displays a chronological list of PR journey entries
  */
-export const TimelineView = ({ entries, onEntryPress }: TimelineViewProps) => {
-  // Define the fixed order of milestones in the journey - ordered from top to bottom
-  const milestoneOrder: EntryType[] = [
-    'submission', 
-    'aor', 
-    'biometrics_request',
-    'biometrics_complete',
-    'medicals_request',
-    'medicals_complete',
-    'background_start',
-    'background_complete',
-    'additional_docs', // Optional step, but included in ordering
-    'p1',
-    'p2', 
-    'ecopr', 
-    'pr_card'
-  ];
+export const TimelineView = ({ entries, onAddEntry }: TimelineViewProps) => {
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.95)).current;
   
-  // Filter entries to remove optional steps that don't have entries
-  const filteredEntries = entries.filter(
-    entry => entry.entry_type !== 'additional_docs' || entries.some(e => e.entry_type === 'additional_docs')
+  // Safely handle add entry
+  const handleAddEntry = useCallback(
+    (entryType: EntryType) => {
+      if (onAddEntry) {
+        onAddEntry(entryType);
+      }
+    },
+    [onAddEntry]
   );
-  
-  // Sort entries by the fixed milestone order, not by date
-  const orderedEntries = [...filteredEntries].sort((a, b) => {
-    const orderA = milestoneOrder.indexOf(a.entry_type);
-    const orderB = milestoneOrder.indexOf(b.entry_type);
-    return orderA - orderB;
-  });
-  
-  // Create animated values for each entry (for fade-in and slide effects)
-  const animatedValues = orderedEntries.map(() => new Animated.Value(0));
 
+  // Run entrance animation
   useEffect(() => {
-    // Animate entries sequentially with a staggered effect
-    const animations = animatedValues.map((value, index) => {
-      return Animated.timing(value, {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 400,
-        delay: index * 150, // Stagger the animations
-        easing: Easing.out(Easing.cubic),
+        duration: 500,
         useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 8,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  // Sort entries by date, newest first
+  const sortedEntries = [...entries].sort((a, b) => {
+    // Use entry_date (the date the milestone was received)
+    const dateA = a.entry_date ? new Date(a.entry_date).getTime() : 0;
+    const dateB = b.entry_date ? new Date(b.entry_date).getTime() : 0;
+
+    // First sort by date (newest first)
+    if (dateB !== dateA) {
+      return dateB - dateA;
+    }
+    
+    // If dates are the same, sort by milestone sequence
+    // Define milestone sequence order for sorting
+    const milestoneOrder = [
+      'submission',
+      'aor',
+      'biometrics_request',
+      'biometrics_complete',
+      'medicals_request',
+      'medicals_complete',
+      'background_start',
+      'background_complete',
+      'p1',
+      'p2',
+      'ecopr',
+      'pr_card'
+    ];
+    
+    const indexA = milestoneOrder.indexOf(a.entry_type);
+    const indexB = milestoneOrder.indexOf(b.entry_type);
+    
+    return indexA - indexB; // Earlier in sequence comes first when dates are equal
+  });
+
+  // Helper function to format the entry date nicely
+  const formatEntryDate = (dateString: string): string => {
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        console.warn('Invalid date format', dateString);
+        return 'Invalid date';
+      }
+      return date.toLocaleDateString('en-CA', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
       });
-    });
+    } catch (error) {
+      console.warn('Error formatting date', error);
+      return 'Date error';
+    }
+  };
 
-    Animated.stagger(100, animations).start();
-  }, [entries.length]); // Re-animate when entries length changes
+  // Render a single timeline entry
+  const renderTimelineEntry = (entry: TimelineEntry, index: number) => {
+    const entryDate = entry.entry_date || entry.created_at || '';
+    const formattedDate = entryDate ? formatEntryDate(entryDate) : 'No date';
+    const daysAgo = getDaysAgo(entryDate);
+    const gradientColors = getMilestoneGradient(entry.entry_type);
+    const isFirstEntry = index === 0;
+    const isLastEntry = index === sortedEntries.length - 1;
 
-  if (!entries.length) {
     return (
-      <View className="items-center justify-center py-8">
-        <Text className="text-lg text-gray-500">No timeline entries yet</Text>
+      <View key={entry.id} className="mb-4 relative">
+        {/* Connector line to previous entry */}
+        {!isFirstEntry && (
+          <View className="absolute top-0 left-[18px] w-[2px] h-[20px] bg-[#e2e8f0]"></View>
+        )}
+        
+        <View className="flex-row">
+          {/* Entry icon with gradient */}
+          <View className="z-10">
+            <View className="rounded-[18px] overflow-hidden">
+              <LinearGradient
+                colors={gradientColors}
+                style={{ 
+                  width: 36, 
+                  height: 36, 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  shadowColor: '#000',
+                  shadowOpacity: 0.2,
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowRadius: 4,
+                  elevation: 3
+                }}
+              >
+                <Ionicons
+                  name={ENTRY_TYPE_ICONS[entry.entry_type]}
+                  size={20}
+                  color="#FFFFFF"
+                />
+              </LinearGradient>
+            </View>
+            
+            {/* Add small checkmark badge */}
+            <View className="absolute -right-1 -bottom-1 w-[18px] h-[18px] rounded-[9px] bg-[#22c55e] items-center justify-center shadow shadow-black/20 elevation-2">
+              <Ionicons name="checkmark" size={12} color="#FFFFFF" />
+            </View>
+          </View>
+          
+          {/* Entry content card */}
+          <View 
+            className="flex-1 ml-3 rounded-[14px] p-3 shadow shadow-black/10 elevation-2 border border-[#f1f5f9]"
+            style={{
+              backgroundColor: `${gradientColors[0]}10`, // Increased opacity to 10 (6.25%)
+            }}
+          >
+            {/* Entry header with title and date */}
+            <View className="flex-row justify-between items-center">
+              <View className="flex-1">
+                <View className="flex-row items-center">
+                  <Text className="text-[#1e293b] text-base font-semibold">
+                    {getMilestoneName(entry.entry_type)}
+                  </Text>
+                </View>
+                <Text className="text-[#64748b] text-xs mt-0.5">
+                  {formattedDate}
+                </Text>
+              </View>
+              
+              {/* Days ago counter */}
+              <View className="items-center min-w-[45px]">
+                <Text className="text-lg font-bold text-[#94a3b8] leading-[22px]">{daysAgo}</Text>
+                <Text className="text-[10px] text-[#94a3b8] leading-[12px]">
+                  {daysAgo === 1 ? 'day ago' : 'days ago'}
+                </Text>
+              </View>
+            </View>
+            
+            {/* Entry notes/comments if available */}
+            {entry.notes && (
+              <View className="mt-2 p-2.5 bg-[#f8fafc] rounded-lg border border-[#f1f5f9]">
+                <Text className="text-[#475569] text-sm">{entry.notes}</Text>
+              </View>
+            )}
+          </View>
+        </View>
+
+        {/* Connector line to next entry */}
+        {!isLastEntry && (
+          <View className="absolute bottom-[-20px] left-[18px] w-[2px] h-[20px] bg-[#e2e8f0]"></View>
+        )}
       </View>
+    );
+  };
+
+  // Check if there are no entries to display
+  if (sortedEntries.length === 0) {
+    return (
+      <Animated.View 
+        className="bg-[#f8fafc] p-5 rounded-2xl shadow shadow-black/10 elevation-2 border border-[#f1f5f9]"
+        style={{ opacity: fadeAnim, transform: [{ scale: scaleAnim }] }}
+      >
+        <View className="items-center justify-center py-5">
+          <Ionicons name="time-outline" size={48} color="#94a3b8" />
+          <Text className="text-[#64748b] text-base mt-2 text-center">
+            No timeline entries yet. Add your first milestone to start tracking your PR journey.
+          </Text>
+          {onAddEntry && (
+            <TouchableOpacity
+              onPress={() => handleAddEntry('submission')}
+              className="mt-4"
+            >
+              <View className="rounded-xl overflow-hidden shadow shadow-[#3b82f6]/20 elevation-2">
+                <LinearGradient
+                  colors={['#3b82f6', '#2563eb']}
+                  style={{ 
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    paddingHorizontal: 20,
+                    paddingVertical: 10
+                  }}
+                >
+                  <Ionicons name="add-circle-outline" size={18} color="#FFFFFF" />
+                  <Text className="ml-1.5 text-white font-medium">Add First Entry</Text>
+                </LinearGradient>
+              </View>
+            </TouchableOpacity>
+          )}
+        </View>
+      </Animated.View>
     );
   }
 
-  const getEntryTypeColor = (entryType: string) => {
-    switch (entryType) {
-      case 'submission':
-        return 'bg-purple-500';
-      case 'aor':
-        return 'bg-maple-red';
-      case 'biometrics_request':
-        return 'bg-teal-500';
-      case 'biometrics_complete':
-        return 'bg-teal-600';
-      case 'medicals_request':
-        return 'bg-blue-500';
-      case 'medicals_complete':
-        return 'bg-blue-600';
-      case 'background_start':
-        return 'bg-yellow-500';
-      case 'background_complete':
-        return 'bg-yellow-600';
-      case 'additional_docs':
-        return 'bg-orange-500';
-      case 'p1':
-        return 'bg-hope-red';
-      case 'p2':
-        return 'bg-hope-red';
-      case 'ecopr':
-        return 'bg-success';
-      case 'pr_card':
-        return 'bg-waiting';
-      default:
-        return 'bg-gray-500';
-    }
-  };
-
-  const getEntryTypeName = (entryType: string) => {
-    switch (entryType) {
-      case 'submission':
-        return 'Submission';
-      case 'aor':
-        return 'AOR';
-      case 'biometrics_request':
-        return 'Biometrics Request';
-      case 'biometrics_complete':
-        return 'Biometrics Complete';
-      case 'medicals_request':
-        return 'Medicals Request';
-      case 'medicals_complete':
-        return 'Medicals Complete';
-      case 'background_start':
-        return 'Background Check';
-      case 'background_complete':
-        return 'Background Cleared';
-      case 'additional_docs':
-        return 'Additional Docs';
-      case 'p1':
-        return 'P1';
-      case 'p2':
-        return 'P2';
-      case 'ecopr':
-        return 'ecoPR';
-      case 'pr_card':
-        return 'PR Card';
-      default:
-        return entryType;
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-CA', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
-
   return (
-    <View className="py-2">
-      {orderedEntries.map((entry, index) => {
-        // Calculate opacity and translation based on the animated value
-        const opacity = animatedValues[index];
-        const translateY = animatedValues[index].interpolate({
-          inputRange: [0, 1],
-          outputRange: [50, 0],
-        });
-        
-        // Get gradient colors for this entry type
-        const gradientColors = getMilestoneGradient(entry.entry_type);
-
-        return (
-          <Animated.View
-            key={entry.id || index.toString()}
-            style={[{ opacity, transform: [{ translateY }] }]}
-            className="relative">
-            {/* Timeline row */}
-            <View className="mb-4 flex-row">
-              {/* Timeline dot with icon and gradient */}
-              <View className="z-10 mr-4 items-center" style={{ width: 32 }}>
+    <Animated.View 
+      className="mb-4"
+      style={{ opacity: fadeAnim, transform: [{ scale: scaleAnim }] }}
+    >
+      <View className="flex-row justify-between items-center mb-3">
+        <Text className="text-lg font-bold text-[#1e293b]">Timeline</Text>
+        <View className="flex-row">
+          <TouchableOpacity 
+            className="mr-2"
+            onPress={() => {/* refresh function */}}
+          >
+            <View className="w-[32px] h-[32px] rounded-full bg-[#f1f5f9] items-center justify-center">
+              <Ionicons name="refresh-outline" size={18} color="#64748b" />
+            </View>
+          </TouchableOpacity>
+          {onAddEntry && (
+            <TouchableOpacity
+              onPress={() => {
+                // Find next logical milestone to add based on existing entries
+                const entryTypes = entries.map(e => e.entry_type);
+                
+                // Default to submission if no entries exist
+                if (entryTypes.length === 0) {
+                  handleAddEntry('submission');
+                  return;
+                }
+                
+                // Define milestone sequence to check for next logical one
+                const milestones: EntryType[] = [
+                  'submission',
+                  'aor',
+                  'biometrics_request',
+                  'biometrics_complete',
+                  'medicals_request',
+                  'medicals_complete',
+                  'background_start',
+                  'background_complete',
+                  'p1',
+                  'p2',
+                  'ecopr',
+                  'pr_card',
+                ];
+                
+                // Find the last completed milestone
+                let lastCompletedIndex = -1;
+                milestones.forEach((milestone, index) => {
+                  if (entryTypes.includes(milestone)) {
+                    lastCompletedIndex = index;
+                  }
+                });
+                
+                // Get the next milestone in sequence
+                const nextIndex = lastCompletedIndex + 1;
+                if (nextIndex < milestones.length) {
+                  handleAddEntry(milestones[nextIndex]);
+                } else {
+                  // If all milestones are completed, start the add entry flow
+                  handleAddEntry('submission');
+                }
+              }}
+            >
+              <View className="rounded-full overflow-hidden shadow shadow-[#3b82f6]/20 elevation-2">
                 <LinearGradient
-                  colors={gradientColors}
-                  className="h-10 w-10 items-center justify-center rounded-full shadow-md"
+                  colors={['#3b82f6', '#2563eb']}
                   style={{ 
-                    elevation: 4,
-                    shadowColor: gradientColors[0],
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.25,
-                    shadowRadius: 3,
+                    height: 32, 
+                    width: 32, 
+                    alignItems: 'center', 
+                    justifyContent: 'center' 
                   }}
                 >
-                  <Ionicons 
-                    name={ENTRY_TYPE_ICONS[entry.entry_type as EntryType]} 
-                    size={18} 
-                    color="#FFFFFF" 
-                  />
-                  {/* Small checkmark badge for completed items */}
-                  <View className="absolute -right-1 -bottom-1 h-5 w-5 items-center justify-center rounded-full bg-success shadow-sm">
-                    <Ionicons name="checkmark" size={12} color="#FFFFFF" />
-                  </View>
+                  <Ionicons name="add" size={20} color="#FFFFFF" />
                 </LinearGradient>
               </View>
-
-              {/* Content card with improved styling */}
-              <TouchableOpacity
-                onPress={() => onEntryPress?.(entry)}
-                activeOpacity={onEntryPress ? 0.7 : 1}
-                className="mb-4 flex-1"
-              >
-                <View
-                  className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm"
-                  style={{
-                    ...styles.cardShadow,
-                    shadowColor: gradientColors[0],
-                    shadowOpacity: 0.15,
-                  }}
-                >
-                  <View className="mb-2 flex-row items-center justify-between">
-                    <LinearGradient
-                      colors={gradientColors}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      className="rounded-full px-3 py-1 shadow-sm"
-                    >
-                      <Text className="text-xs font-medium text-white">
-                        {getEntryTypeName(entry.entry_type)}
-                      </Text>
-                    </LinearGradient>
-                    <Text className="text-sm text-gray-500 font-medium">{formatDate(entry.entry_date)}</Text>
-                  </View>
-
-                  {entry.notes && <Text className="text-gray-700 mt-1">{entry.notes}</Text>}
-                </View>
-              </TouchableOpacity>
-            </View>
-            
-            {/* Connecting line to next milestone with gradient */}
-            {index !== orderedEntries.length - 1 && (
-              <View 
-                className="absolute left-4 top-10 -z-0 w-[2px] overflow-hidden" 
-                style={{ height: 70 }}
-              >
-                <LinearGradient
-                  colors={[
-                    gradientColors[0],
-                    index < orderedEntries.length - 1 ? 
-                      getMilestoneGradient(orderedEntries[index + 1].entry_type)[0] : 
-                      '#d1d5db'
-                  ]}
-                  start={{ x: 0.5, y: 0 }}
-                  end={{ x: 0.5, y: 1 }}
-                  className="h-full w-full"
-                />
-              </View>
-            )}
-          </Animated.View>
-        );
-      })}
-    </View>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+      
+      <View className="bg-white rounded-2xl p-4 shadow shadow-black/10 elevation-2 border border-[#f1f5f9]">
+        {sortedEntries.map(renderTimelineEntry)}
+      </View>
+    </Animated.View>
   );
 };
-
-const styles = StyleSheet.create({
-  cardShadow: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-});
