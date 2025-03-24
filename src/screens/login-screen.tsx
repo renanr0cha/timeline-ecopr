@@ -1,21 +1,16 @@
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
-  Image,
+  Animated,
   KeyboardAvoidingView,
   Platform,
+  StatusBar,
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from 'react-native';
 
-import { ScreenContent } from '../components/screen-content';
-import { ThemedCard } from '../components/themed-card';
-import { colors } from '../constants/colors';
 import { resetPassword, signInWithEmail, signUpWithEmail } from '../lib/auth';
 import { logger } from '../lib/logger';
 import { supabase } from '../lib/supabase';
@@ -32,56 +27,104 @@ interface LoginScreenProps {
  * Login screen component that provides email sign-in options
  */
 export default function LoginScreen({ onLoginSuccess, authState, setAuthState }: LoginScreenProps) {
+  console.log('LoginScreen initializing...', { authState: !!authState });
+
+  // Move hooks OUT of try block - hooks must be at the top level
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [mode, setMode] = useState<'signin' | 'signup' | 'reset'>('signin');
 
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const slideAnim = useRef(new Animated.Value(0)).current;
+
+  // Handle mode transitions with animations
+  const transitionToMode = (newMode: 'signin' | 'signup' | 'reset') => {
+    // Start fade out
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => {
+      // Change mode after fade out
+      setMode(newMode);
+
+      // Reset slide position based on transition direction
+      const slideValue = newMode === 'signin' ? -100 : 100;
+      slideAnim.setValue(slideValue);
+
+      // Start fade in and slide animations
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    });
+  };
+
+  console.log('LoginScreen states initialized');
+
   useEffect(() => {
+    console.log('LoginScreen useEffect running');
     // Check if we already have a session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    console.log('Checking for existing session...');
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => {
+        console.log('Session check result:', { hasSession: !!session });
+        if (session) {
+          setAuthState({
+            session: {
+              access_token: session.access_token,
+              refresh_token: session.refresh_token,
+              expires_at: session.expires_at || 0,
+              user: session.user,
+            },
+            user: session.user,
+          });
+          onLoginSuccess();
+        }
+      })
+      .catch((err) => {
+        console.error('Error getting session:', err);
+      });
+
+    // Set up auth state listener
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log('Auth state changed:', { hasSession: !!session });
+      setAuthState({
+        session: session
+          ? {
+              access_token: session.access_token,
+              refresh_token: session.refresh_token,
+              expires_at: session.expires_at || 0,
+              user: session.user,
+            }
+          : null,
+        user: session?.user || null,
+      });
       if (session) {
-        setAuthState({ 
-          session: {
-            access_token: session.access_token,
-            refresh_token: session.refresh_token,
-            expires_at: session.expires_at || 0,
-            user: session.user
-          }, 
-          user: session.user 
-        });
         onLoginSuccess();
       }
     });
 
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setAuthState({ 
-          session: session ? {
-            access_token: session.access_token,
-            refresh_token: session.refresh_token,
-            expires_at: session.expires_at || 0,
-            user: session.user
-          } : null, 
-          user: session?.user || null 
-        });
-        if (session) {
-          onLoginSuccess();
-        }
-      }
-    );
-
-    // Clean up subscription
     return () => {
+      console.log('LoginScreen cleaning up subscription');
       subscription.unsubscribe();
     };
   }, []);
 
-  /**
-   * Handle email sign in
-   */
   const handleEmailSignIn = async () => {
     if (!email || !password) {
       setError('Please enter both email and password');
@@ -93,7 +136,6 @@ export default function LoginScreen({ onLoginSuccess, authState, setAuthState }:
       setError(null);
 
       const { data } = await signInWithEmail(email, password);
-      
       logger.info('Signed in with email', { userId: data.user?.id });
     } catch (error: any) {
       logger.error('Email sign-in error', { error });
@@ -103,9 +145,6 @@ export default function LoginScreen({ onLoginSuccess, authState, setAuthState }:
     }
   };
 
-  /**
-   * Handle email sign up
-   */
   const handleEmailSignUp = async () => {
     if (!email || !password) {
       setError('Please enter both email and password');
@@ -122,7 +161,8 @@ export default function LoginScreen({ onLoginSuccess, authState, setAuthState }:
       setError(null);
 
       const { data } = await signUpWithEmail(email, password);
-      
+      logger.info('Signed up with email', { userId: data.user?.id });
+
       // Check if email confirmation is required
       if (data.session === null) {
         Alert.alert(
@@ -130,10 +170,8 @@ export default function LoginScreen({ onLoginSuccess, authState, setAuthState }:
           'We sent you an email with a confirmation link to complete your sign up.',
           [{ text: 'OK' }]
         );
-        setMode('signin');
+        transitionToMode('signin');
       }
-      
-      logger.info('Signed up with email', { userId: data.user?.id });
     } catch (error: any) {
       logger.error('Email sign-up error', { error });
       setError(error.message || 'Failed to sign up. Please try again.');
@@ -156,13 +194,11 @@ export default function LoginScreen({ onLoginSuccess, authState, setAuthState }:
       setError(null);
 
       await resetPassword(email);
-      
-      Alert.alert(
-        'Check your email',
-        'We sent you an email with a password reset link.',
-        [{ text: 'OK' }]
-      );
-      setMode('signin');
+
+      Alert.alert('Check your email', 'We sent you an email with a password reset link.', [
+        { text: 'OK' },
+      ]);
+      transitionToMode('signin');
     } catch (error: any) {
       logger.error('Password reset error', { error });
       setError(error.message || 'Failed to reset password. Please try again.');
@@ -171,159 +207,123 @@ export default function LoginScreen({ onLoginSuccess, authState, setAuthState }:
     }
   };
 
-  /**
-   * Render based on current mode (signin, signup, reset)
-   */
-  const renderAuthForm = () => {
-    return (
-      <View>
-        <TextInput
-          placeholder="Email"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          className="mb-4 rounded-lg border border-gray-300 bg-white p-3 text-gray-800"
-        />
-
-        {mode !== 'reset' && (
-          <TextInput
-            placeholder="Password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            className="mb-4 rounded-lg border border-gray-300 bg-white p-3 text-gray-800"
-          />
-        )}
-
-        {mode === 'signin' && (
-          <>
-            <TouchableOpacity
-              onPress={handleEmailSignIn}
-              disabled={isLoading}
-              className="mb-4 overflow-hidden rounded-lg">
-              <LinearGradient
-                colors={[colors.primary, colors.primaryDark]}
-                className="flex-row items-center justify-center px-6 py-3">
-                <Ionicons name="log-in-outline" size={20} color="white" className="mr-2" />
-                <Text className="text-base font-medium text-white">Sign In</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-
-            <View className="mb-4 flex-row justify-between">
-              <TouchableOpacity onPress={() => setMode('reset')}>
-                <Text className="text-sm text-blue-600">Forgot Password?</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => setMode('signup')}>
-                <Text className="text-sm text-blue-600">Create Account</Text>
-              </TouchableOpacity>
-            </View>
-          </>
-        )}
-
-        {mode === 'signup' && (
-          <>
-            <TouchableOpacity
-              onPress={handleEmailSignUp}
-              disabled={isLoading}
-              className="mb-4 overflow-hidden rounded-lg">
-              <LinearGradient
-                colors={[colors.primary, colors.primaryDark]}
-                className="flex-row items-center justify-center px-6 py-3">
-                <Ionicons name="person-add-outline" size={20} color="white" className="mr-2" />
-                <Text className="text-base font-medium text-white">Sign Up</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-
-            <View className="mb-4 flex-row justify-center">
-              <TouchableOpacity onPress={() => setMode('signin')}>
-                <Text className="text-sm text-blue-600">Already have an account? Sign In</Text>
-              </TouchableOpacity>
-            </View>
-          </>
-        )}
-
-        {mode === 'reset' && (
-          <>
-            <TouchableOpacity
-              onPress={handleResetPassword}
-              disabled={isLoading}
-              className="mb-4 overflow-hidden rounded-lg">
-              <LinearGradient
-                colors={[colors.primary, colors.primaryDark]}
-                className="flex-row items-center justify-center px-6 py-3">
-                <Ionicons name="key-outline" size={20} color="white" className="mr-2" />
-                <Text className="text-base font-medium text-white">Reset Password</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-
-            <View className="mb-4 flex-row justify-center">
-              <TouchableOpacity onPress={() => setMode('signin')}>
-                <Text className="text-sm text-blue-600">Back to Sign In</Text>
-              </TouchableOpacity>
-            </View>
-          </>
-        )}
-      </View>
-    );
-  };
-
+  // Updated functional login screen with signup option
+  console.log('Rendering login screen, mode:', mode);
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1"
-    >
-      <ScreenContent scrollable>
-        <View className="flex-1 items-center justify-center py-12">
-          {/* Logo and Header */}
-          <View className="mb-10 items-center">
-            <Image
-              source={require('../../assets/icon.png')}
-              style={{ width: 100, height: 100 }}
-              className="mb-4 rounded-xl"
-            />
-            <Text className="text-3xl font-bold text-gray-800">Timeline</Text>
-            <Text className="text-center text-base text-gray-600">
-              Track your PR journey milestones
-            </Text>
+    <>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        className="flex-1 bg-gray-50">
+        <View className="flex-1 items-center justify-center p-6">
+          {/* App Logo */}
+          <View className="mb-[30px] h-[100px] w-[100px] items-center justify-center rounded-full bg-maple-red shadow-lg">
+            <Text className="text-[36px] font-bold text-white">PR</Text>
           </View>
 
-          <ThemedCard className="w-full max-w-md">
-            <View className="p-4">
-              <Text className="mb-4 text-lg font-medium text-gray-700">
-                {mode === 'signin' ? 'Sign In' : mode === 'signup' ? 'Create Account' : 'Reset Password'}
-              </Text>
+          <Text className="mb-[10px] text-[28px] font-bold text-text-primary">Timeline ecoPR</Text>
 
-              {/* Error message */}
-              {error && (
-                <View className="mb-4 rounded-md bg-red-50 p-3">
-                  <Text className="text-center text-sm text-red-800">{error}</Text>
-                </View>
+          <Animated.Text
+            className="mb-[30px] text-center text-base text-text-secondary"
+            style={{
+              opacity: fadeAnim,
+              transform: [{ translateX: slideAnim }],
+            }}>
+            {mode === 'signin'
+              ? 'Track your PR journey with ease'
+              : mode === 'signup'
+                ? 'Join our community of PR applicants'
+                : "We'll help you get back in"}
+          </Animated.Text>
+
+          <Animated.View
+            className="w-full max-w-[350px]"
+            style={{
+              opacity: fadeAnim,
+              transform: [{ translateX: slideAnim }],
+            }}>
+            <TextInput
+              placeholder="Email"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              className="mb-4 w-full rounded-[10px] border border-gray-200 bg-white p-[15px] text-base"
+              placeholderTextColor="#94a3b8"
+            />
+
+            {mode !== 'reset' && (
+              <TextInput
+                placeholder="Password"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                className="mb-6 w-full rounded-[10px] border border-gray-200 bg-white p-[15px] text-base"
+                placeholderTextColor="#94a3b8"
+              />
+            )}
+
+            {/* Action button based on current mode */}
+            <TouchableOpacity
+              onPress={
+                mode === 'signin'
+                  ? handleEmailSignIn
+                  : mode === 'signup'
+                    ? handleEmailSignUp
+                    : handleResetPassword
+              }
+              className="mb-5 w-full items-center rounded-[10px] bg-maple-red p-[15px] shadow"
+              disabled={isLoading}>
+              <Text className="text-base font-semibold text-white">
+                {isLoading
+                  ? 'Processing...'
+                  : mode === 'signin'
+                    ? 'Sign In'
+                    : mode === 'signup'
+                      ? 'Sign Up'
+                      : 'Reset Password'}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Mode switchers */}
+            <View className="mt-[10px] flex-row justify-center">
+              {mode === 'signin' && (
+                <>
+                  <TouchableOpacity onPress={() => transitionToMode('signup')}>
+                    <Text className="text-[15px] font-medium text-maple-red">
+                      Create an account
+                    </Text>
+                  </TouchableOpacity>
+                  <Text className="mx-2 text-text-secondary">•</Text>
+                  <TouchableOpacity onPress={() => transitionToMode('reset')}>
+                    <Text className="text-[15px] font-medium text-maple-red">Forgot password?</Text>
+                  </TouchableOpacity>
+                </>
               )}
 
-              {/* Email Password Form */}
-              {renderAuthForm()}
+              {mode === 'signup' && (
+                <TouchableOpacity onPress={() => transitionToMode('signin')}>
+                  <Text className="text-[15px] font-medium text-maple-red">
+                    Already have an account? Sign in
+                  </Text>
+                </TouchableOpacity>
+              )}
 
-              {/* Loading indicator */}
-              {isLoading && (
-                <View className="mt-4 items-center">
-                  <ActivityIndicator size="small" color={colors.primary} />
-                  <Text className="mt-2 text-sm text-gray-500">Processing...</Text>
-                </View>
+              {mode === 'reset' && (
+                <TouchableOpacity onPress={() => transitionToMode('signin')}>
+                  <Text className="text-[15px] font-medium text-maple-red">Back to Sign In</Text>
+                </TouchableOpacity>
               )}
             </View>
-          </ThemedCard>
+          </Animated.View>
 
-          {/* Terms and Privacy */}
-          <View className="mt-8">
-            <Text className="text-center text-xs text-gray-500">
-              By signing in, you agree to our{' '}
-              <Text className="text-blue-500">Terms of Service</Text> and{' '}
-              <Text className="text-blue-500">Privacy Policy</Text>
-            </Text>
-          </View>
+          {error && (
+            <View className="border-l-status-error mt-6 w-full max-w-[350px] rounded-lg border-l-4 bg-[rgba(239,68,68,0.1)] p-3">
+              <Text className="text-status-error">{error}</Text>
+            </View>
+          )}
         </View>
-      </ScreenContent>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </>
   );
-} 
+}
