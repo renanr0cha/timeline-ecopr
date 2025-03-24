@@ -1,6 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Animated, Text, TouchableOpacity, View } from 'react-native';
 
@@ -10,25 +9,13 @@ import { SectionHeader } from '../components/section-header';
 import { ThemedButton } from '../components/themed-button';
 import { ThemedCard } from '../components/themed-card';
 import { TimelineView } from '../components/timeline-view';
+import { colors } from '../constants/colors';
+import { signOut } from '../lib/auth';
 import { logger } from '../lib/logger';
 import { supabase } from '../lib/supabase';
 import { timelineService } from '../services/timeline-service';
-import { EntryType, RootStackParamList, TimelineEntry } from '../types';
+import { EntryType, TimelineEntry } from '../types';
 import { loadMockDataForCurrentUser } from '../utils/mock-data';
-
-// Updated to include onComplete in the AddEntry params
-type HomeScreenNavigationProp = NativeStackNavigationProp<
-  RootStackParamList & {
-    AddEntry: {
-      deviceId: string;
-      entryType?: EntryType;
-      entryId?: string;
-      onComplete?: () => void;
-      existingEntries?: TimelineEntry[];
-    };
-  },
-  'Home'
->;
 
 interface HomeScreenProps {
   navigation: any;
@@ -59,7 +46,9 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
 
       if (useMockData) {
         // Load mock data - now we need to get the userId from auth
-        const { data: { session } } = await supabase.auth.getSession();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
         const userId = session?.user?.id || 'mock-user-id';
         const mockEntries = loadMockDataForCurrentUser(userId);
         setEntries(mockEntries);
@@ -133,10 +122,23 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   };
 
   /**
+   * Handle user logout
+   */
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      logger.info('User logged out successfully');
+    } catch (error) {
+      logger.error('Error signing out', { error });
+      Alert.alert('Error', 'Failed to sign out. Please try again.');
+    }
+  };
+
+  /**
    * Navigate to the statistics screen
    */
   const goToStatistics = () => {
-    navigation.navigate('Statistics');
+    navigation.navigate('StatisticsTab');
   };
 
   /**
@@ -179,7 +181,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     navigation.setOptions({
       headerRight: () => (
         <TouchableOpacity onPress={goToMockDataDemo} className="mr-2">
-          <Ionicons name="layers-outline" size={24} color="#0284c7" />
+          <Ionicons name="layers-outline" size={24} color={colors.maple.red} />
         </TouchableOpacity>
       ),
     });
@@ -190,28 +192,27 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
       <View className="flex-1 py-6">
         {/* Header Section */}
         <View className="mb-6 flex-row items-center justify-between">
-          <SectionHeader
-            title="Your PR Journey"
-            description="Track your progress towards permanent residency"
-            size="lg"
-            className="mb-0 flex-1"
-          />
+          <View className="w-full flex-row items-center justify-between">
+            <TouchableOpacity
+              onPress={toggleMockData}
+              className={`mr-2 rounded-full px-3 py-1.5 ${
+                useMockData ? 'bg-success/10' : 'bg-inactive/10'
+              }`}>
+              <Text
+                className={`text-xs font-medium ${useMockData ? 'text-success' : 'text-inactive'}`}>
+                {useMockData ? 'Using Sample Data' : 'Use Sample Data'}
+              </Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={toggleMockData}
-            className={`rounded-full px-3 py-1.5 ${
-              useMockData ? 'bg-success/10' : 'bg-inactive/10'
-            }`}>
-            <Text
-              className={`text-xs font-medium ${useMockData ? 'text-success' : 'text-inactive'}`}>
-              {useMockData ? 'Using Sample Data' : 'Use Sample Data'}
-            </Text>
-          </TouchableOpacity>
+            <TouchableOpacity onPress={handleLogout} className="rounded-full bg-maple-red/10 p-2">
+              <Ionicons name="log-out-outline" size={20} color={colors.maple.red} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {loading ? (
           <ThemedCard className="items-center justify-center py-12">
-            <ActivityIndicator size="large" color="#FF1E38" />
+            <ActivityIndicator size="large" color={colors.maple.red} />
             <Text className="mt-4 text-text-secondary">Loading your journey data...</Text>
           </ThemedCard>
         ) : (
@@ -235,7 +236,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                     className="mb-0 flex-1"
                   />
                   <Animated.View style={{ transform: [{ rotate }] }}>
-                    <Ionicons name="chevron-down" size={24} color="#6C757D" />
+                    <Ionicons name="chevron-down" size={24} color={colors.text.secondary} />
                   </Animated.View>
                 </TouchableOpacity>
 
@@ -281,7 +282,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                     <Text className="text-text-secondary">See how your timeline compares</Text>
                   </View>
                   <View className="rounded-full bg-maple-red/10 p-2">
-                    <Ionicons name="bar-chart-outline" size={24} color="#FF1E38" />
+                    <Ionicons name="bar-chart-outline" size={24} color={colors.maple.red} />
                   </View>
                 </View>
               </ThemedCard>
