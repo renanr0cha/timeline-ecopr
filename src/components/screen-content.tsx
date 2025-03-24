@@ -1,37 +1,50 @@
-import React from 'react';
-import { SafeAreaView, ScrollView, View, ViewStyle } from 'react-native';
+import React, { ReactNode } from 'react';
+import { SafeAreaView, ScrollView, View } from 'react-native';
+
 
 interface ScreenContentProps {
-  children: React.ReactNode;
-  style?: ViewStyle;
+  children: ReactNode;
   scrollable?: boolean;
-  padding?: boolean;
+  padded?: boolean;
+  gradient?: boolean;
+  noSafeArea?: boolean;
 }
 
 /**
- * Wrapper component for screen content
- * Provides consistent styling and behavior for all screens
- *
- * @param children - Child components to render
- * @param style - Additional style to apply
- * @param scrollable - Whether content should be scrollable
- * @param padding - Whether to apply default padding
+ * Wrapper component for screen content with consistent styling
  */
-export function ScreenContent({
+export const ScreenContent: React.FC<ScreenContentProps> = ({
   children,
-  style,
   scrollable = false,
-  padding = true,
-}: ScreenContentProps) {
-  const renderContent = () => (
-    <View className={`flex-1 ${padding ? 'p-4' : ''}`} style={style}>
-      {children}
-    </View>
-  );
+  padded = true,
+  gradient = true,
+  noSafeArea = false,
+}) => {
+  console.log('Rendering ScreenContent');
+  const ContentWrapper = scrollable ? ScrollView : View;
+  const Container = noSafeArea ? View : SafeAreaView;
 
   return (
-    <SafeAreaView className="flex-1 bg-[#FFF5F6]">
-      {scrollable ? <ScrollView className="flex-1">{renderContent()}</ScrollView> : renderContent()}
-    </SafeAreaView>
+    <>
+      {gradient ? (
+        <View style={{ flex: 1, backgroundColor: '#f8f9fa' }}>
+          <Container className="flex-1">
+            <ContentWrapper
+              className={`flex-1 ${padded ? 'px-4' : ''}`}
+              contentContainerStyle={scrollable && padded ? { paddingBottom: 20 } : undefined}>
+              {children}
+            </ContentWrapper>
+          </Container>
+        </View>
+      ) : (
+        <Container className="flex-1 bg-white">
+          <ContentWrapper
+            className={`flex-1 ${padded ? 'px-4' : ''}`}
+            contentContainerStyle={scrollable && padded ? { paddingBottom: 20 } : undefined}>
+            {children}
+          </ContentWrapper>
+        </Container>
+      )}
+    </>
   );
-}
+};

@@ -1,46 +1,56 @@
-import React from 'react';
-import { View, ViewProps } from 'react-native';
+import React, { ReactNode } from 'react';
+import { TouchableOpacity, View, ViewStyle } from 'react-native';
 
-interface ThemedCardProps extends ViewProps {
-  children: React.ReactNode;
-  variant?: 'default' | 'elevated';
-  padding?: 'none' | 'sm' | 'md' | 'lg';
+interface ThemedCardProps {
+  children: ReactNode;
+  className?: string;
+  style?: ViewStyle;
+  variant?: 'default' | 'elevated' | 'outlined';
+  onPress?: () => void;
 }
 
 /**
- * A themed card component that follows the design system using Tailwind classes
+ * Themed card component with consistent styling
  */
 export const ThemedCard: React.FC<ThemedCardProps> = ({
   children,
-  variant = 'default',
-  padding = 'md',
   className = '',
-  ...props
+  style,
+  variant = 'default',
+  onPress,
 }) => {
-  const baseClasses = 'bg-white rounded-lg overflow-hidden';
-  
-  const variantClasses = {
-    default: 'border border-frost shadow-sm',
-    elevated: 'border border-frost shadow-md',
-  };
+  // Base styles for all variants
+  let cardClass = 'rounded-xl overflow-hidden ';
 
-  const paddingClasses = {
-    none: 'p-0',
-    sm: 'p-3',
-    md: 'p-4',
-    lg: 'p-6',
-  };
+  // Apply variant-specific styles
+  switch (variant) {
+    case 'elevated':
+      cardClass += 'bg-white shadow shadow-black/10 elevation-2 p-4 ';
+      break;
+    case 'outlined':
+      cardClass += 'bg-white border border-[#e2e8f0] p-4 ';
+      break;
+    case 'default':
+    default:
+      cardClass += 'bg-white p-4 ';
+      break;
+  }
+
+  // Add any additional classes
+  cardClass += className;
+
+  // Use TouchableOpacity if onPress is provided, otherwise use View
+  if (onPress) {
+    return (
+      <TouchableOpacity className={cardClass} style={style} onPress={onPress} activeOpacity={0.7}>
+        {children}
+      </TouchableOpacity>
+    );
+  }
 
   return (
-    <View
-      className={`
-        ${baseClasses}
-        ${variantClasses[variant]}
-        ${paddingClasses[padding]}
-        ${className}
-      `}
-      {...props}>
+    <View className={cardClass} style={style}>
       {children}
     </View>
   );
-}; 
+};

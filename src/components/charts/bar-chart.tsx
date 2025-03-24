@@ -78,7 +78,7 @@ export const BarChart = ({
           rotation: 0,
         },
         formatTopBarValue: (value: number) => `${value}${yAxisSuffix}`,
-        formatYLabel: (yLabel: string) => `${parseInt(yLabel)}${yAxisSuffix}`,
+        formatYLabel: (yLabel: string) => `${parseInt(yLabel, 10)}${yAxisSuffix}`,
         barRadius: 8, // Rounded top corners
         fillShadowGradient: '#E31837',
         fillShadowGradientOpacity: 1,
