@@ -56,9 +56,19 @@ export const getDaysAgo = (dateString: string): number => {
       };
 
       entryDate = new Date(year, monthMap[month], day);
+    } else if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      // For ISO format dates like "2023-07-15"
+      // Parse using UTC to avoid timezone issues
+      const [year, month, day] = dateString.split('-').map((num) => parseInt(num, 10));
+      entryDate = new Date(Date.UTC(year, month - 1, day));
     } else {
       // Try standard date parsing for other formats
-      entryDate = new Date(dateString);
+      // Create date as UTC to avoid timezone issues
+      const parsedDate = new Date(dateString);
+      // Use the UTC components to create a new date
+      entryDate = new Date(
+        Date.UTC(parsedDate.getUTCFullYear(), parsedDate.getUTCMonth(), parsedDate.getUTCDate())
+      );
     }
 
     // Check if date is valid
@@ -67,12 +77,11 @@ export const getDaysAgo = (dateString: string): number => {
       return 0;
     }
 
-    const today = new Date();
+    // Get today's date in UTC
+    const now = new Date();
+    const today = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
 
-    // Reset hours to compare just the dates
-    entryDate.setHours(0, 0, 0, 0);
-    today.setHours(0, 0, 0, 0);
-
+    // Calculate difference in days
     const timeDiff = today.getTime() - entryDate.getTime();
     return Math.floor(timeDiff / (1000 * 3600 * 24));
   } catch (error) {

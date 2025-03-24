@@ -33,6 +33,7 @@ interface AddEntryScreenProps {
       entryId?: string;
       onComplete?: () => void;
       existingEntries?: TimelineEntry[];
+      mode?: 'create' | 'edit';
     };
   };
 }
@@ -163,14 +164,21 @@ const MILESTONE_SEQUENCE: EntryType[] = [
  * Enhanced with animations and improved UI
  */
 export default function AddEntryScreen({ route }: AddEntryScreenProps) {
-  const { entryType: initialEntryType, entryId, onComplete, existingEntries = [] } = route.params;
+  const { 
+    entryType: initialEntryType, 
+    entryId, 
+    onComplete, 
+    existingEntries = [],
+    mode = 'create'  // Default to create mode if not specified
+  } = route.params;
+  
   const [entryType, setEntryType] = useState<EntryType>(initialEntryType || 'aor');
   const [date, setDate] = useState(new Date());
   const [dateText, setDateText] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(mode === 'edit');  // Set based on mode parameter
   const [showEntryTypeSelection, setShowEntryTypeSelection] = useState(false);
   const navigation = useNavigation<AddEntryScreenNavigationProp>();
 
@@ -202,8 +210,51 @@ export default function AddEntryScreen({ route }: AddEntryScreenProps) {
       : MILESTONE_SEQUENCE[0];
   };
 
+  /**
+   * Load entry data for editing
+   */
+  const loadEntry = async () => {
+    if (!isEditing || !entryId) return;
+    
+    try {
+      setSubmitting(true);
+      
+      // Check if we have the entry data in existingEntries
+      const existingEntry = existingEntries.find(entry => entry.id === entryId);
+      
+      if (existingEntry) {
+        // Use existing entry data
+        setEntryType(existingEntry.entry_type);
+        
+        if (existingEntry.entry_date) {
+          const parsedDate = new Date(existingEntry.entry_date);
+          if (!isNaN(parsedDate.getTime())) {
+            setDate(parsedDate);
+            setDateText(formatDate(parsedDate));
+          }
+        }
+        
+        if (existingEntry.notes) {
+          setNotes(existingEntry.notes);
+        }
+      } else {
+        // If for some reason we don't have the entry in existingEntries,
+        // we could fetch it from the API here
+        logger.warn('Entry not found in existingEntries', { entryId });
+        Alert.alert('Error', 'Could not find the entry to edit');
+        navigation.goBack();
+      }
+    } catch (error) {
+      logger.error('Error loading entry for editing', { error, entryId });
+      Alert.alert('Error', 'Failed to load entry data');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Use effect to set up the screen based on mode
   useEffect(() => {
-    // Run entry animations
+    // Run entrance animations
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -218,37 +269,17 @@ export default function AddEntryScreen({ route }: AddEntryScreenProps) {
         easing: Easing.out(Easing.cubic),
       }),
     ]).start();
-
-    // If no entry type is specified, but we have existing entries,
-    // automatically detect and use the next step
-    if (!initialEntryType && existingEntries.length > 0) {
-      const nextType = getNextMilestoneType();
-      setEntryType(nextType);
-    }
-
-    // Load entry data if editing
-    if (entryId) {
+    
+    // Load entry data when in edit mode
+    if (isEditing) {
       loadEntry();
     } else {
-      // Set today's date as default
+      // For new entries, set the date to today by default
       const today = new Date();
+      setDate(today);
       setDateText(formatDate(today));
     }
-  }, []);
-
-  /**
-   * Load entry data when editing an existing entry
-   */
-  const loadEntry = async () => {
-    try {
-      // Placeholder for loading existing entry data
-      // Would need to implement a getEntry method in the timelineService
-      setIsEditing(true);
-    } catch (error) {
-      logger.error('Error loading entry', { error });
-      Alert.alert('Error', 'Failed to load entry data');
-    }
-  };
+  }, [isEditing, entryId]);
 
   /**
    * Format date for display

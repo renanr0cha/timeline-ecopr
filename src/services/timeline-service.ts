@@ -152,13 +152,25 @@ export const timelineService = {
         throw new Error('You must be signed in to update entries');
       }
 
+      // First, check if the entry exists
+      const { data: entryExists, error: checkError } = await supabase
+        .from('timeline_entries')
+        .select('id')
+        .eq('id', entryId)
+        .single();
+
+      if (checkError || !entryExists) {
+        logger.error('Entry not found for update', { entryId });
+        throw new EntryNotFoundError(entryId);
+      }
+
       // Update the entry
       const updatePayload = {
         ...updates,
         updated_at: new Date().toISOString(),
       };
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('timeline_entries')
         .update(updatePayload)
         .eq('id', entryId);
@@ -170,18 +182,6 @@ export const timelineService = {
           details: error.details,
           hint: error.hint,
         });
-      }
-
-      // Check if any rows were affected
-      if (!data) {
-        logger.error('Entry not found for update', { entryId });
-        throw new EntryNotFoundError(entryId);
-      }
-
-      const typedData = data as unknown as any[];
-      if (Array.isArray(typedData) && typedData.length === 0) {
-        logger.error('Entry not found for update', { entryId });
-        throw new EntryNotFoundError(entryId);
       }
 
       logger.info('Timeline entry updated successfully', { entryId });

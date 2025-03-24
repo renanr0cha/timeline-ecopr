@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Text, TouchableOpacity, View } from 'react-native';
 
 import {
@@ -21,6 +21,7 @@ const CONNECTOR_HEIGHT = 20;
 interface ProgressSummaryProps {
   entries: TimelineEntry[];
   onAddEntry?: (entryType: EntryType) => void;
+  onEditEntry?: (entry: TimelineEntry) => void;
   emptyState?: boolean;
 }
 
@@ -31,12 +32,16 @@ interface ProgressSummaryProps {
 export const ProgressSummary = ({
   entries,
   onAddEntry,
+  onEditEntry,
   emptyState = false,
 }: ProgressSummaryProps) => {
   // Animation values
   const progressWidth = useRef(new Animated.Value(0)).current;
   const fadeIn = useRef(new Animated.Value(0)).current;
   const scaleInOut = useRef(new Animated.Value(0.95)).current;
+
+  // Edit mode state
+  const [editMode, setEditMode] = useState(false);
 
   // Define the fixed order of milestones in the journey - ordered from top to bottom
   const milestones: EntryType[] = [
@@ -123,6 +128,21 @@ export const ProgressSummary = ({
     }
 
     try {
+      // For ISO format dates (YYYY-MM-DD)
+      if (entry.entry_date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        const [year, month, day] = entry.entry_date.split('-').map((num) => parseInt(num, 10));
+        // Create date in UTC to avoid timezone issues
+        const date = new Date(Date.UTC(year, month - 1, day));
+
+        return date.toLocaleDateString('en-CA', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+          timeZone: 'UTC', // Ensure display in UTC
+        });
+      }
+
+      // For other date formats
       const date = new Date(entry.entry_date);
       if (isNaN(date.getTime())) {
         console.warn('Invalid entry date format', { date: entry.entry_date, milestone });
@@ -179,9 +199,22 @@ export const ProgressSummary = ({
     [onAddEntry]
   );
 
+  // Add useCallback for the onEditEntry handler
+  const handleEditEntry = useCallback(
+    (entry: TimelineEntry) => {
+      if (onEditEntry) {
+        onEditEntry(entry);
+      }
+    },
+    [onEditEntry]
+  );
+
   // Check if we should show the add button for a specific milestone
   const shouldShowAddButton = (index: number, milestone: EntryType): boolean => {
     if (!onAddEntry) return false;
+
+    // Don't show add button in edit mode
+    if (editMode) return false;
 
     // Special handling for two-stage milestones
     if (isCompletionStage(milestone)) {
@@ -218,19 +251,37 @@ export const ProgressSummary = ({
     return 'Congratulations on completing your PR journey!';
   };
 
+  // Toggle edit mode
+  const toggleEditMode = () => {
+    setEditMode((prev) => !prev);
+  };
+
+  // Check if a milestone entry exists and can be edited
+  const canEditMilestone = (milestone: EntryType): boolean => {
+    if (!onEditEntry) return false;
+    return entries.some((entry) => entry.entry_type === milestone);
+  };
+
+  // Get entry for a milestone
+  const getEntryForMilestone = (milestone: EntryType): TimelineEntry | undefined => {
+    return entries.find((entry) => entry.entry_type === milestone);
+  };
+
   return (
     <Animated.View style={[{ opacity: fadeIn, transform: [{ scale: scaleInOut }] }]}>
       <ThemedCard className="mb-5 bg-transparent">
         <View className="mb-3 flex-row items-center justify-between">
           <Text className="text-lg font-bold text-[#1e293b]">Your PR Journey</Text>
-          <View className="overflow-hidden rounded-2xl shadow-sm">
-            <LinearGradient
-              colors={['rgba(255, 4, 33, 0.644)', '#ee8989ac']}
-              style={{ paddingHorizontal: 12, paddingVertical: 6 }}>
-              <Text className="text-sm font-semibold text-white">
-                {Math.round(progress * 100)}% Complete
-              </Text>
-            </LinearGradient>
+          <View className="flex-row items-center">
+            <View className="overflow-hidden rounded-2xl shadow-sm">
+              <LinearGradient
+                colors={['rgba(255, 4, 33, 0.644)', '#ee8989ac']}
+                style={{ paddingHorizontal: 12, paddingVertical: 6 }}>
+                <Text className="text-sm font-semibold text-white">
+                  {Math.round(progress * 100)}% Complete
+                </Text>
+              </LinearGradient>
+            </View>
           </View>
         </View>
 
@@ -318,6 +369,9 @@ export const ProgressSummary = ({
                   // Get milestone date and calculate days ago
                   const milestoneDate = getMilestoneDate(milestone);
                   const daysAgo = milestoneDate ? getDaysAgo(milestoneDate) : 0;
+
+                  // Get the entry for this milestone if it exists
+                  const entry = getEntryForMilestone(milestone);
 
                   return (
                     <View key={milestone} className="relative pb-0">
@@ -407,7 +461,7 @@ export const ProgressSummary = ({
                             </View>
 
                             {/* Days ago counter - only show for completed milestones with a date */}
-                            {isCompleted && milestoneDate && (
+                            {isCompleted && milestoneDate && !editMode && (
                               <View className="min-w-[45px] items-center pl-2">
                                 <Text className="text-lg font-bold leading-[22px] text-[#94a3b8]">
                                   {daysAgo}
@@ -416,6 +470,34 @@ export const ProgressSummary = ({
                                   {daysAgo === 1 ? 'day ago' : 'days ago'}
                                 </Text>
                               </View>
+                            )}
+
+                            {/* Edit button - only show in edit mode for completed milestones */}
+                            {editMode && canEditMilestone(milestone) && entry && (
+                              <TouchableOpacity
+                                onPress={() => handleEditEntry(entry)}
+                                className="elevation-3 shadow-md shadow-[#3b82f6]/20">
+                                <View className="overflow-hidden rounded-2xl">
+                                  <LinearGradient
+                                    colors={['#3b82f6', '#2563eb']}
+                                    style={{
+                                      flexDirection: 'row',
+                                      alignItems: 'center',
+                                      paddingHorizontal: 12,
+                                      paddingVertical: 6,
+                                      shadowColor: '#3b82f6',
+                                      shadowOpacity: 0.2,
+                                      shadowOffset: { width: 0, height: 2 },
+                                      shadowRadius: 3,
+                                      elevation: 3,
+                                    }}>
+                                    <Ionicons name="pencil-outline" size={16} color="#FFFFFF" />
+                                    <Text className="ml-1 text-sm font-medium text-white">
+                                      Edit
+                                    </Text>
+                                  </LinearGradient>
+                                </View>
+                              </TouchableOpacity>
                             )}
 
                             {/* Add button for the next milestone */}
@@ -470,6 +552,30 @@ export const ProgressSummary = ({
                 })
             : null}
         </View>
+
+        {/* Edit mode toggle button at the bottom - alternative way to toggle edit mode */}
+        {entries.length > 0 && onEditEntry && (
+          <TouchableOpacity onPress={toggleEditMode} className="mt-4 self-center">
+            <LinearGradient
+              colors={editMode ? ['#64748b', '#475569'] : ['#3b82f6', '#2563eb']}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingHorizontal: 16,
+                paddingVertical: 8,
+                borderRadius: 12,
+              }}>
+              <Ionicons
+                name={editMode ? 'close-outline' : 'pencil-outline'}
+                size={18}
+                color="#FFFFFF"
+              />
+              <Text className="ml-2 text-sm font-medium text-white">
+                {editMode ? 'Exit Edit Mode' : 'Edit Milestones'}
+              </Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        )}
       </ThemedCard>
     </Animated.View>
   );

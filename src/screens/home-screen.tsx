@@ -97,9 +97,29 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     });
   };
 
+  /**
+   * Navigate to edit entry screen with the entry to edit
+   * @param entry The timeline entry to edit
+   */
+  const navigateToEditEntry = (entry: TimelineEntry) => {
+    navigation.navigate('AddEntry', {
+      entryType: entry.entry_type,
+      entryId: entry.id,
+      mode: 'edit',
+      existingEntries: entries,
+    });
+  };
+
   // Handle add entry for a specific milestone type
   const handleAddEntry = (entryType: EntryType) => {
     navigateToAddEntry(entryType);
+  };
+
+  /**
+   * Handle editing an existing entry
+   */
+  const handleEditEntry = (entry: TimelineEntry) => {
+    navigateToEditEntry(entry);
   };
 
   /**
@@ -221,6 +241,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
             <ProgressSummary
               entries={entries}
               onAddEntry={handleAddEntry}
+              onEditEntry={handleEditEntry}
               emptyState={!hasEntries}
             />
             {/* Collapsible Timeline Section */}
