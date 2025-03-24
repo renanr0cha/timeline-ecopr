@@ -1,274 +1,551 @@
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { RouteProp } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { format } from 'date-fns';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Keyboard,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Alert,
+  Animated,
+  Easing,
+  Modal,
+  Platform,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
-import { colors } from '../constants/colors';
+import { MaskedTextInput } from 'react-native-mask-text';
+
+import { ScreenContent } from '../components/screen-content';
+import { SectionHeader } from '../components/section-header';
+import { ThemedButton } from '../components/themed-button';
+import { ThemedCard } from '../components/themed-card';
+import { ThemedInput } from '../components/themed-input';
 import { logger } from '../lib/logger';
-import { supabase } from '../lib/supabase';
 import { timelineService } from '../services/timeline-service';
-import { RootStackParamList } from '../types';
-import { getEntryTypeOptions, translateEntryType } from '../utils/entry-types';
+import { EntryType, RootStackParamList, TimelineEntry } from '../types';
 
-type AddEntryScreenProps = {
-  route: RouteProp<RootStackParamList, 'AddEntry'>;
-  navigation: NativeStackNavigationProp<RootStackParamList, 'AddEntry'>;
-};
+type AddEntryScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'AddEntry'>;
 
-export const AddEntryScreen = ({ route, navigation }: AddEntryScreenProps) => {
-  const { entryToEdit, mode } = route.params || {};
-  const isEditMode = mode === 'edit' && entryToEdit;
+interface AddEntryScreenProps {
+  route: {
+    params: {
+      entryType?: EntryType;
+      entryId?: string;
+      onComplete?: () => void;
+      existingEntries?: TimelineEntry[];
+    };
+  };
+}
 
-  const [entryType, setEntryType] = useState(entryToEdit?.entry_type || '');
-  const [notes, setNotes] = useState(entryToEdit?.notes || '');
-  const [entryDate, setEntryDate] = useState(
-    entryToEdit?.entry_date ? new Date(entryToEdit.entry_date) : new Date()
-  );
+/**
+ * Entry type options and display information
+ */
+const ENTRY_TYPE_OPTIONS: {
+  value: EntryType;
+  label: string;
+  icon: string;
+  color: string;
+  description: string;
+}[] = [
+  {
+    value: 'submission',
+    label: 'Submission',
+    icon: 'paper-plane-outline',
+    color: 'bg-purple-500',
+    description: 'Application submission date',
+  },
+  {
+    value: 'aor',
+    label: 'AOR',
+    icon: 'document-text-outline',
+    color: 'bg-maple-red',
+    description: 'Acknowledgement of Receipt',
+  },
+  {
+    value: 'biometrics_request',
+    label: 'Biometrics Request',
+    icon: 'finger-print-outline',
+    color: 'bg-teal-500',
+    description: 'Biometrics request received',
+  },
+  {
+    value: 'biometrics_complete',
+    label: 'Biometrics Complete',
+    icon: 'checkmark-circle-outline',
+    color: 'bg-teal-600',
+    description: 'Biometrics appointment completed',
+  },
+  {
+    value: 'medicals_request',
+    label: 'Medicals Request',
+    icon: 'medical-outline',
+    color: 'bg-blue-500',
+    description: 'Medical examination request',
+  },
+  {
+    value: 'medicals_complete',
+    label: 'Medicals Complete',
+    icon: 'medkit-outline',
+    color: 'bg-blue-600',
+    description: 'Medical examination passed',
+  },
+  {
+    value: 'background_start',
+    label: 'Background Check',
+    icon: 'shield-outline',
+    color: 'bg-yellow-500',
+    description: 'Background check started',
+  },
+  {
+    value: 'background_complete',
+    label: 'Background Cleared',
+    icon: 'shield-checkmark-outline',
+    color: 'bg-yellow-600',
+    description: 'Background check completed',
+  },
+  {
+    value: 'additional_docs',
+    label: 'Additional Docs',
+    icon: 'folder-open-outline',
+    color: 'bg-orange-500',
+    description: 'Additional documents submitted',
+  },
+  {
+    value: 'p1',
+    label: 'P1',
+    icon: 'person-outline',
+    color: 'bg-hope-red',
+    description: 'Principal applicant portal access',
+  },
+  {
+    value: 'p2',
+    label: 'P2',
+    icon: 'people-outline',
+    color: 'bg-hope-red',
+    description: 'Secondary applicant portal access',
+  },
+  {
+    value: 'ecopr',
+    label: 'ecoPR',
+    icon: 'mail-outline',
+    color: 'bg-success',
+    description: 'Electronic Confirmation of PR',
+  },
+  {
+    value: 'pr_card',
+    label: 'PR Card',
+    icon: 'card-outline',
+    color: 'bg-waiting',
+    description: 'Permanent Resident Card received',
+  },
+];
+
+/**
+ * Get the milestone sequence for determining next steps
+ */
+const MILESTONE_SEQUENCE: EntryType[] = [
+  'submission',
+  'aor',
+  'biometrics_request',
+  'biometrics_complete',
+  'medicals_request',
+  'medicals_complete',
+  'background_start',
+  'background_complete',
+  'p1',
+  'p2',
+  'ecopr',
+  'pr_card',
+];
+
+/**
+ * Screen for adding or editing a timeline entry
+ * Enhanced with animations and improved UI
+ */
+export default function AddEntryScreen({ route }: AddEntryScreenProps) {
+  const { entryType: initialEntryType, entryId, onComplete, existingEntries = [] } = route.params;
+  const [entryType, setEntryType] = useState<EntryType>(initialEntryType || 'aor');
+  const [date, setDate] = useState(new Date());
+  const [dateText, setDateText] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [typeMenuOpen, setTypeMenuOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
-  
-  const notesInputRef = useRef<TextInput>(null);
-  const entryTypeOptions = getEntryTypeOptions();
+  const [notes, setNotes] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [showEntryTypeSelection, setShowEntryTypeSelection] = useState(false);
+  const navigation = useNavigation<AddEntryScreenNavigationProp>();
+
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+
+  // Get the current progress to determine the next step
+  const getCurrentStepIndex = (): number => {
+    let completedIndex = -1;
+
+    MILESTONE_SEQUENCE.forEach((milestone, index) => {
+      if (existingEntries.some((entry) => entry.entry_type === milestone)) {
+        completedIndex = index;
+      }
+    });
+
+    return completedIndex;
+  };
+
+  // Determine the next milestone that needs to be added
+  const getNextMilestoneType = (): EntryType => {
+    const currentIndex = getCurrentStepIndex();
+    const nextIndex = currentIndex + 1;
+
+    // If we have next milestone, return it, otherwise default to first
+    return nextIndex < MILESTONE_SEQUENCE.length
+      ? MILESTONE_SEQUENCE[nextIndex]
+      : MILESTONE_SEQUENCE[0];
+  };
 
   useEffect(() => {
-    const keyboardDidShowListener = Keyboard.addListener(
-      'keyboardDidShow',
-      () => setKeyboardVisible(true)
-    );
-    const keyboardDidHideListener = Keyboard.addListener(
-      'keyboardDidHide',
-      () => setKeyboardVisible(false)
-    );
+    // Run entry animations
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+        easing: Easing.out(Easing.cubic),
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+        easing: Easing.out(Easing.cubic),
+      }),
+    ]).start();
 
-    return () => {
-      keyboardDidShowListener.remove();
-      keyboardDidHideListener.remove();
-    };
+    // If no entry type is specified, but we have existing entries,
+    // automatically detect and use the next step
+    if (!initialEntryType && existingEntries.length > 0) {
+      const nextType = getNextMilestoneType();
+      setEntryType(nextType);
+    }
+
+    // Load entry data if editing
+    if (entryId) {
+      loadEntry();
+    } else {
+      // Set today's date as default
+      const today = new Date();
+      setDateText(formatDate(today));
+    }
   }, []);
 
+  /**
+   * Load entry data when editing an existing entry
+   */
+  const loadEntry = async () => {
+    try {
+      // Placeholder for loading existing entry data
+      // Would need to implement a getEntry method in the timelineService
+      setIsEditing(true);
+    } catch (error) {
+      logger.error('Error loading entry', { error });
+      Alert.alert('Error', 'Failed to load entry data');
+    }
+  };
+
+  /**
+   * Format date for display
+   */
+  const formatDate = (date: Date): string => {
+    // Create a date with timezone offset to ensure the correct day is used
+    const correctedDate = new Date(date);
+
+    // We need to ensure the date values reflect local time, not UTC
+    const year = correctedDate.getFullYear();
+    const month = String(correctedDate.getMonth() + 1).padStart(2, '0');
+    const day = String(correctedDate.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+  };
+
+  /**
+   * Parse date string to Date object
+   */
+  const parseDate = (dateStr: string): Date | null => {
+    // Validate date format (YYYY-MM-DD)
+    const regex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!regex.test(dateStr)) return null;
+
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+
+    // Validate date (e.g., 2023-02-31 is invalid)
+    if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+      return null;
+    }
+
+    return date;
+  };
+
+  /**
+   * Handle date text change and validate format
+   */
+  const handleDateTextChange = (text: string) => {
+    setDateText(text);
+    const parsedDate = parseDate(text);
+    if (parsedDate) {
+      setDate(parsedDate);
+    }
+  };
+
+  const handleCalendarPress = () => {
+    setShowDatePicker(true);
+  };
+
+  /**
+   * Handle date change from the date picker
+   */
   const handleDateChange = (event: any, selectedDate?: Date) => {
-    setShowDatePicker(false);
+    // On Android, pressing cancel results in selectedDate being undefined
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+
     if (selectedDate) {
-      setEntryDate(selectedDate);
+      setDate(selectedDate);
+      setDateText(formatDate(selectedDate));
     }
   };
 
-  const validateForm = () => {
-    if (!entryType) {
-      Alert.alert('Missing Information', 'Please select an entry type');
-      return false;
-    }
-    return true;
-  };
-
+  /**
+   * Submit the entry to the timeline service
+   */
   const handleSubmit = async () => {
-    if (!validateForm()) return;
+    // Validate date input
+    const parsedDate = parseDate(dateText);
+    if (!parsedDate) {
+      Alert.alert('Invalid Date', 'Please enter a valid date in YYYY-MM-DD format');
+      return;
+    }
 
-    setLoading(true);
-    setError(null);
+    // Check if date is in the future
+    if (parsedDate > new Date()) {
+      Alert.alert('Future Date', 'The date cannot be in the future');
+      return;
+    }
 
     try {
-      // Check if user is authenticated
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session?.user) {
-        setError('Authentication required. Please sign in to add entries.');
-        setLoading(false);
-        return;
-      }
+      setSubmitting(true);
 
-      const entryData = {
-        entry_type: entryType,
-        entry_date: format(entryDate, 'yyyy-MM-dd'),
-        notes,
-      };
-
-      let result;
-      if (isEditMode && entryToEdit) {
+      if (isEditing && entryId) {
         // Update existing entry
-        result = await timelineService.updateEntry(entryToEdit.id, entryData);
-        if (result) {
-          logger.info('Timeline entry updated successfully', { entryId: entryToEdit.id });
-          navigation.goBack();
-        }
+        await timelineService.updateEntry(entryId, {
+          entry_type: entryType,
+          entry_date: dateText,
+          notes,
+        });
       } else {
         // Add new entry
-        result = await timelineService.addEntry(entryData);
-        if (result) {
-          logger.info('New timeline entry added successfully');
-          navigation.goBack();
-        }
+        await timelineService.addEntry(entryType, dateText, notes);
       }
 
-      if (!result) {
-        setError('Failed to save entry. Please try again.');
+      // Call the onComplete callback if provided
+      if (onComplete) {
+        onComplete();
       }
-    } catch (err) {
-      logger.error('Error saving timeline entry', { error: err });
-      setError('An error occurred while saving your entry. Please try again.');
+
+      navigation.goBack();
+    } catch (error) {
+      logger.error('Error submitting entry', { error });
+      Alert.alert('Error', 'There was a problem saving your entry. Please try again.');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
-  };
-
-  const handleEntryTypeSelect = (type: string) => {
-    setEntryType(type);
-    setTypeMenuOpen(false);
-    
-    // Focus on notes input after selecting type
-    setTimeout(() => {
-      if (notesInputRef.current) {
-        notesInputRef.current.focus();
-      }
-    }, 100);
   };
 
   return (
-    <LinearGradient
-      colors={[colors.bgGradientStart, colors.bgGradientEnd]}
-      className="flex-1"
-    >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="flex-1"
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
-      >
-        <ScrollView
-          className="flex-1 p-4"
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ flexGrow: 1 }}
-        >
-          <View className="bg-white rounded-lg p-5 shadow-sm mb-4">
-            <Text className="text-xl font-bold mb-1 text-gray-800">
-              {isEditMode ? 'Edit Timeline Entry' : 'Add Timeline Entry'}
-            </Text>
-            <Text className="text-gray-500 mb-4">
-              {isEditMode
-                ? 'Update information about this milestone'
-                : 'Record a new milestone in your journey'}
-            </Text>
+    <ScreenContent scrollable>
+      <Animated.View
+        style={{
+          opacity: fadeAnim,
+          transform: [{ translateY: slideAnim }],
+        }}
+        className="flex-1 py-6">
+        <SectionHeader
+          title={isEditing ? 'Edit Timeline Entry' : 'Add Timeline Entry'}
+          description="Record your PR journey milestones"
+          size="lg"
+          className="mb-6"
+        />
 
-            {/* Entry Type Selector */}
-            <View className="mb-4">
-              <Text className="text-gray-700 mb-1 font-medium">Entry Type</Text>
-              <TouchableOpacity
-                onPress={() => setTypeMenuOpen(!typeMenuOpen)}
-                className="border border-gray-300 rounded-lg p-3 flex-row justify-between items-center bg-white"
-              >
-                <Text className={entryType ? "text-gray-800" : "text-gray-400"}>
-                  {entryType ? translateEntryType(entryType) : 'Select entry type'}
-                </Text>
-                <Ionicons
-                  name={typeMenuOpen ? "chevron-up" : "chevron-down"}
-                  size={16}
-                  color="#666"
-                />
-              </TouchableOpacity>
-
-              {/* Entry Type Dropdown Menu */}
-              {typeMenuOpen && (
-                <View className="border border-gray-300 rounded-lg mt-1 bg-white max-h-60 overflow-hidden">
-                  <ScrollView nestedScrollEnabled={true} className="max-h-60">
-                    {entryTypeOptions.map((option) => (
-                      <TouchableOpacity
-                        key={option.value}
-                        onPress={() => handleEntryTypeSelect(option.value)}
-                        className={`p-3 border-b border-gray-100 ${
-                          entryType === option.value ? "bg-gray-100" : ""
-                        }`}
-                      >
-                        <Text className="text-gray-800">{option.label}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
+        <ThemedCard className="mb-6">
+          {/* Entry Type Selection */}
+          <View className="mb-4">
+            <Text className="mb-2 text-sm font-medium text-text-primary">Milestone Type</Text>
+            <TouchableOpacity
+              onPress={() => setShowEntryTypeSelection(!showEntryTypeSelection)}
+              className="flex-row items-center justify-between rounded-lg border border-frost bg-pure-white p-3">
+              <View className="flex-row items-center">
+                <View
+                  className={`mr-3 rounded-full p-2 ${ENTRY_TYPE_OPTIONS.find((opt) => opt.value === entryType)?.color}`}>
+                  <Ionicons
+                    name={ENTRY_TYPE_OPTIONS.find((opt) => opt.value === entryType)?.icon as any}
+                    size={20}
+                    color="#FFFFFF"
+                  />
                 </View>
-              )}
-            </View>
-
-            {/* Date Picker */}
-            <View className="mb-4">
-              <Text className="text-gray-700 mb-1 font-medium">Date</Text>
-              <TouchableOpacity
-                onPress={() => setShowDatePicker(true)}
-                className="border border-gray-300 rounded-lg p-3 bg-white"
-              >
-                <Text className="text-gray-800">
-                  {format(entryDate, 'MMMM d, yyyy')}
-                </Text>
-              </TouchableOpacity>
-              {showDatePicker && (
-                <DateTimePicker
-                  value={entryDate}
-                  mode="date"
-                  display="default"
-                  onChange={handleDateChange}
-                  maximumDate={new Date()}
-                />
-              )}
-            </View>
-
-            {/* Notes */}
-            <View className="mb-4">
-              <Text className="text-gray-700 mb-1 font-medium">Notes</Text>
-              <TextInput
-                ref={notesInputRef}
-                value={notes}
-                onChangeText={setNotes}
-                placeholder="Add details about this milestone..."
-                multiline
-                className="border border-gray-300 rounded-lg p-3 min-h-[100px] bg-white text-gray-800"
-                textAlignVertical="top"
-                placeholderTextColor="#9ca3af"
+                <View>
+                  <Text className="text-base font-medium text-text-primary">
+                    {ENTRY_TYPE_OPTIONS.find((opt) => opt.value === entryType)?.label}
+                  </Text>
+                  <Text className="text-sm text-text-secondary">
+                    {ENTRY_TYPE_OPTIONS.find((opt) => opt.value === entryType)?.description}
+                  </Text>
+                </View>
+              </View>
+              <Ionicons
+                name={showEntryTypeSelection ? 'chevron-up' : 'chevron-down'}
+                size={20}
+                color="#6C757D"
               />
-            </View>
+            </TouchableOpacity>
 
-            {/* Error message */}
-            {error && (
-              <View className="mb-4 p-3 bg-red-50 rounded-lg">
-                <Text className="text-red-600">{error}</Text>
+            {/* Entry Type Options */}
+            {showEntryTypeSelection && (
+              <View className="mt-2 rounded-lg border border-frost bg-pure-white">
+                {ENTRY_TYPE_OPTIONS.map((option, index) => (
+                  <TouchableOpacity
+                    key={option.value}
+                    onPress={() => {
+                      setEntryType(option.value);
+                      setShowEntryTypeSelection(false);
+                    }}
+                    className={`flex-row items-center border-frost p-3 ${
+                      index !== ENTRY_TYPE_OPTIONS.length - 1 ? 'border-b' : ''
+                    }`}>
+                    <View className={`mr-3 rounded-full p-2 ${option.color}`}>
+                      <Ionicons name={option.icon as any} size={20} color="#FFFFFF" />
+                    </View>
+                    <View>
+                      <Text className="text-base font-medium text-text-primary">
+                        {option.label}
+                      </Text>
+                      <Text className="text-sm text-text-secondary">{option.description}</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
               </View>
             )}
           </View>
 
-          {/* Submit Button */}
-          {!isKeyboardVisible && (
-            <View className="mt-auto">
+          {/* Date Input */}
+          <View className="mb-4">
+            <Text className="mb-2 text-sm font-medium text-text-primary">Date Received</Text>
+            <View className="flex-row items-center">
+              <View className="flex-1">
+                <MaskedTextInput
+                  mask="9999-99-99"
+                  onChangeText={handleDateTextChange}
+                  value={dateText}
+                  placeholder="YYYY-MM-DD"
+                  placeholderTextColor="#6C757D"
+                  keyboardType="numeric"
+                  className="rounded-lg border border-frost bg-pure-white px-4 text-base text-text-primary"
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    height: 56, // Match ThemedInput height
+                    fontSize: 16,
+                    paddingVertical: 16,
+                    paddingHorizontal: 16,
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: '#E0E0E0',
+                  }}
+                />
+              </View>
               <TouchableOpacity
-                onPress={handleSubmit}
-                disabled={loading}
-                className={`rounded-lg p-4 ${
-                  loading ? "bg-gray-400" : "bg-maple-leaf"
-                } shadow-sm`}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#ffffff" />
-                ) : (
-                  <Text className="text-white font-bold text-center text-lg">
-                    {isEditMode ? 'Update Entry' : 'Add Entry'}
-                  </Text>
-                )}
+                onPress={handleCalendarPress}
+                className="ml-2 rounded-lg border border-frost bg-pure-white"
+                style={{
+                  height: 56, // Match the input height
+                  width: 56,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                <Ionicons name="calendar-outline" size={24} color="#FF1E38" />
               </TouchableOpacity>
             </View>
-          )}
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </LinearGradient>
+          </View>
+
+          {/* Notes Input */}
+          <ThemedInput
+            label="Notes (Optional)"
+            value={notes}
+            onChangeText={setNotes}
+            placeholder="Add any additional details..."
+            multiline
+            numberOfLines={4}
+            className="h-24"
+          />
+        </ThemedCard>
+
+        {/* Action Buttons */}
+        <View className="flex-row justify-end space-x-3">
+          <ThemedButton variant="secondary" onPress={() => navigation.goBack()}>
+            Cancel
+          </ThemedButton>
+          <ThemedButton variant="primary" onPress={handleSubmit} loading={submitting}>
+            {isEditing ? 'Save Changes' : 'Add Entry'}
+          </ThemedButton>
+        </View>
+
+        {/* Date Picker */}
+        {showDatePicker &&
+          (Platform.OS === 'ios' ? (
+            <Modal
+              animationType="slide"
+              transparent
+              visible={showDatePicker}
+              onRequestClose={() => setShowDatePicker(false)}>
+              <View className="flex-1 justify-end bg-black/50">
+                <View className="rounded-t-xl bg-white p-4">
+                  <View className="mb-4 flex-row items-center justify-between">
+                    <ThemedButton
+                      variant="secondary"
+                      size="sm"
+                      onPress={() => setShowDatePicker(false)}>
+                      Cancel
+                    </ThemedButton>
+                    <Text className="text-lg font-medium">Select Date</Text>
+                    <ThemedButton
+                      variant="primary"
+                      size="sm"
+                      onPress={() => {
+                        setShowDatePicker(false);
+                      }}>
+                      Done
+                    </ThemedButton>
+                  </View>
+
+                  <DateTimePicker
+                    value={date}
+                    mode="date"
+                    display="spinner"
+                    onChange={handleDateChange}
+                    textColor="#FF1E38"
+                    accentColor="#FF1E38"
+                    maximumDate={new Date()}
+                  />
+                </View>
+              </View>
+            </Modal>
+          ) : (
+            <DateTimePicker
+              value={date}
+              mode="date"
+              display="default"
+              onChange={handleDateChange}
+              maximumDate={new Date()}
+            />
+          ))}
+      </Animated.View>
+    </ScreenContent>
   );
-};
+}
