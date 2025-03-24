@@ -78,11 +78,13 @@ export type RootStackParamList = {
   AddEntry: {
     entryType?: EntryType;
     entryId?: string;
+    entryToEdit?: TimelineEntry;
+    mode?: 'create' | 'edit';
     onComplete?: () => void;
     existingEntries?: TimelineEntry[];
   };
-  Statistics: undefined;
   MockDataDemo: undefined;
+  StatisticsTab: undefined;
 };
 
 /**

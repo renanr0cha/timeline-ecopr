@@ -5,6 +5,8 @@
  * capabilities and improve error messaging throughout the app.
  */
 
+import { TimelineEntry } from '.';
+
 /**
  * Base error class for all application errors
  */
