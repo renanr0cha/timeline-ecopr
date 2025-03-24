@@ -1,6 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Animated, Dimensions, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Animated,
+  Dimensions,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { BarChart, LineChart, ProgressChart, StackedBarChart } from 'react-native-chart-kit';
 
 import { ProgressSummary } from '../components/progress-summary';
@@ -20,12 +28,14 @@ export default function MockDataDemo() {
   const [timelineExpanded, setTimelineExpanded] = useState(false);
   const [weeklyBreakdown, setWeeklyBreakdown] = useState<WeeklyBreakdown[]>([]);
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
-  
+
   // Chart type selection states
   const [timeSeriesChartType, setTimeSeriesChartType] = useState<'line' | 'bar' | 'area'>('line');
   const [weeklyChartType, setWeeklyChartType] = useState<'bar' | 'horizontal' | 'line'>('bar');
-  const [distributionChartType, setDistributionChartType] = useState<'stacked' | 'progress' | 'horizontal'>('stacked');
-  
+  const [distributionChartType, setDistributionChartType] = useState<
+    'stacked' | 'progress' | 'horizontal'
+  >('stacked');
+
   const screenWidth = Dimensions.get('window').width;
 
   // Animation for timeline section
@@ -53,7 +63,7 @@ export default function MockDataDemo() {
       const mockEntries = generateMockTimelineEntries('demo-device-id', 20);
 
       // Filter entries for the demo device
-      const deviceEntries = mockEntries.filter((entry) => entry.device_id === 'demo-device-id');
+      const deviceEntries = mockEntries.filter((entry) => entry.user_id === 'demo-device-id');
       setTimelineEntries(deviceEntries);
 
       // Generate mock statistics
@@ -114,7 +124,7 @@ export default function MockDataDemo() {
   const toggleTimelineExpanded = () => {
     const newValue = !timelineExpanded;
     setTimelineExpanded(newValue);
-    
+
     Animated.parallel([
       Animated.timing(rotateAnim, {
         toValue: newValue ? 1 : 0,
@@ -228,55 +238,6 @@ export default function MockDataDemo() {
     };
   };
 
-  // Get data for the distribution chart - using stacked bar chart
-  const getDistributionChartData = () => {
-    if (!statistics.length) {
-      return {
-        labels: ['No Data'],
-        legend: ['No Data'],
-        data: [[0]],
-        barColors: ['#ddd'],
-      };
-    }
-
-    // For stacked bar chart
-    if (distributionChartType === 'stacked') {
-      return {
-        labels: ['Jan', 'Feb', 'Mar'],
-        legend: ['AOR', 'P2', 'ecoPR', 'PR Card'],
-        data: [
-          [12, 18, 8, 4],
-          [9, 15, 12, 6],
-          [7, 9, 11, 9]
-        ],
-        barColors: ['#3b82f6', '#8b5cf6', '#22c55e', '#f59e0b'],
-      };
-    }
-    
-    // For progress chart
-    else if (distributionChartType === 'progress') {
-      return {
-        labels: ['AOR', 'P2', 'ecoPR', 'PR Card'],
-        data: [0.23, 0.35, 0.26, 0.16], // Normalize to values between 0-1
-        colors: ['#3b82f6', '#8b5cf6', '#22c55e', '#f59e0b'],
-      };
-    }
-    
-    // For horizontal bar chart
-    else {
-      return {
-        labels: ['AOR', 'P2', 'ecoPR', 'PR Card'],
-        datasets: [
-          {
-            data: [28, 42, 31, 19],
-            color: (opacity = 1) => `rgba(110, 86, 207, ${opacity})`,
-            strokeWidth: 0,
-          },
-        ],
-      };
-    }
-  };
-
   // Sort entries by date (newest first)
   const sortedEntries = [...timelineEntries].sort((a, b) => {
     return new Date(b.entry_date).getTime() - new Date(a.entry_date).getTime();
@@ -287,8 +248,8 @@ export default function MockDataDemo() {
     if (!statistics.length) return [];
 
     const monthMap = new Map<string, CommunityStatistic[]>();
-    
-    statistics.forEach(stat => {
+
+    statistics.forEach((stat) => {
       if (stat.month_year) {
         if (!monthMap.has(stat.month_year)) {
           monthMap.set(stat.month_year, []);
@@ -296,9 +257,8 @@ export default function MockDataDemo() {
         monthMap.get(stat.month_year)!.push(stat);
       }
     });
-    
-    return Array.from(monthMap.entries())
-      .map(([month, stats]) => ({ month, statistics: stats }));
+
+    return Array.from(monthMap.entries()).map(([month, stats]) => ({ month, statistics: stats }));
   };
 
   if (loading) {
@@ -313,27 +273,25 @@ export default function MockDataDemo() {
   }
 
   // Chart selection component
-  const ChartTypeSelector = ({ 
-    currentType, 
-    options, 
-    onSelect 
-  }: { 
-    currentType: string, 
-    options: {value: string, label: string}[], 
-    onSelect: (type: any) => void 
+  const ChartTypeSelector = ({
+    currentType,
+    options,
+    onSelect,
+  }: {
+    currentType: string;
+    options: { value: string; label: string }[];
+    onSelect: (type: any) => void;
   }) => (
-    <View className="flex-row justify-center my-2">
+    <View className="my-2 flex-row justify-center">
       {options.map((option) => (
         <TouchableOpacity
           key={option.value}
           onPress={() => onSelect(option.value)}
-          className={`mx-1 px-3 py-1 rounded-full ${
+          className={`mx-1 rounded-full px-3 py-1 ${
             currentType === option.value ? 'bg-maple-leaf' : 'bg-gray-200'
-          }`}
-        >
-          <Text className={`text-xs ${
-            currentType === option.value ? 'text-white' : 'text-gray-700'
           }`}>
+          <Text
+            className={`text-xs ${currentType === option.value ? 'text-white' : 'text-gray-700'}`}>
             {option.label}
           </Text>
         </TouchableOpacity>
@@ -349,8 +307,8 @@ export default function MockDataDemo() {
 
         <View className="mb-8">
           <Text className="mb-4 text-xl font-semibold text-gray-800">Interactive PR Journey</Text>
-          <ProgressSummary 
-            entries={timelineEntries} 
+          <ProgressSummary
+            entries={timelineEntries}
             onAddEntry={handleAddEntry}
             emptyState={false}
           />
@@ -358,16 +316,12 @@ export default function MockDataDemo() {
 
         <View className="mb-8">
           <Text className="mb-4 text-xl font-semibold text-gray-800">Empty State Journey</Text>
-          <ProgressSummary 
-            entries={[]} 
-            onAddEntry={handleAddEntry}
-            emptyState={true}
-          />
+          <ProgressSummary entries={[]} onAddEntry={handleAddEntry} emptyState />
         </View>
 
         <View className="mb-8">
           <Text className="mb-4 text-xl font-semibold text-gray-800">Collapsible Timeline</Text>
-          
+
           {/* Timeline Header with Toggle */}
           <TouchableOpacity
             onPress={toggleTimelineExpanded}
@@ -379,44 +333,47 @@ export default function MockDataDemo() {
           </TouchableOpacity>
 
           {/* Timeline Content - conditionally visible */}
-          <Animated.View 
-            style={{ 
+          <Animated.View
+            style={{
               height: contentHeight.interpolate({
                 inputRange: [0, 1],
-                outputRange: [0, 250]
+                outputRange: [0, 250],
               }),
               overflow: 'hidden',
             }}
-            className="rounded-b-xl bg-white shadow-sm"
-          >
-          <TimelineView entries={sortedEntries.slice(0, 5)} />
+            className="rounded-b-xl bg-white shadow-sm">
+            <TimelineView entries={sortedEntries.slice(0, 5)} />
           </Animated.View>
         </View>
 
         <View className="mb-8">
           <Text className="mb-4 text-xl font-semibold text-gray-800">Charts</Text>
-          
+
           {/* Time Series Chart Section */}
           <View className="mb-6 rounded-xl bg-white p-4 shadow-sm">
-            <Text className="mb-2 text-lg font-bold text-gray-800">P2 Waiting for ecoPR by Month</Text>
-            
+            <Text className="mb-2 text-lg font-bold text-gray-800">
+              P2 Waiting for ecoPR by Month
+            </Text>
+
             <ChartTypeSelector
               currentType={timeSeriesChartType}
               options={[
-                {value: 'line', label: 'Line Chart'},
-                {value: 'bar', label: 'Bar Chart'},
-                {value: 'area', label: 'Area Chart'}
+                { value: 'line', label: 'Line Chart' },
+                { value: 'bar', label: 'Bar Chart' },
+                { value: 'area', label: 'Area Chart' },
               ]}
               onSelect={(type) => setTimeSeriesChartType(type)}
             />
-            
+
             <Text className="mb-2 text-xs text-gray-500">
               {timeSeriesChartType === 'line' && 'Line charts better visualize trends over time'}
-              {timeSeriesChartType === 'bar' && 'Bar charts provide clear comparison between periods'}
-              {timeSeriesChartType === 'area' && 'Area charts emphasize the magnitude of values over time'}
+              {timeSeriesChartType === 'bar' &&
+                'Bar charts provide clear comparison between periods'}
+              {timeSeriesChartType === 'area' &&
+                'Area charts emphasize the magnitude of values over time'}
             </Text>
-            
-            <ScrollView horizontal showsHorizontalScrollIndicator={true}>
+
+            <ScrollView horizontal showsHorizontalScrollIndicator>
               {timeSeriesChartType === 'line' && (
                 <LineChart
                   data={getWaitingChartData()}
@@ -460,7 +417,7 @@ export default function MockDataDemo() {
                   fromZero
                 />
               )}
-              
+
               {timeSeriesChartType === 'bar' && (
                 <BarChart
                   data={getWaitingChartData()}
@@ -498,7 +455,7 @@ export default function MockDataDemo() {
                   fromZero
                 />
               )}
-              
+
               {timeSeriesChartType === 'area' && (
                 <LineChart
                   data={getWaitingChartData()}
@@ -545,11 +502,11 @@ export default function MockDataDemo() {
                 />
               )}
             </ScrollView>
-            
+
             <Text className="mt-2 text-center text-xs italic text-gray-500">
               Swipe horizontally to view more months
             </Text>
-            
+
             <View className="mt-2">
               <Text className="mb-2 text-center text-xs text-gray-500">
                 Tap on a month to see weekly breakdown
@@ -569,37 +526,39 @@ export default function MockDataDemo() {
                         }`}>
                         {stat.month_year}
                       </Text>
-            </TouchableOpacity>
+                    </TouchableOpacity>
                   ))}
                 </View>
               </ScrollView>
             </View>
           </View>
-          
+
           {/* Weekly Breakdown Chart Section */}
           {selectedMonth && weeklyBreakdown.length > 0 && (
             <View className="mb-6 rounded-xl bg-white p-4 shadow-sm">
               <Text className="mb-2 text-lg font-bold text-gray-800">
                 Weekly Breakdown: {selectedMonth}
               </Text>
-              
+
               <ChartTypeSelector
                 currentType={weeklyChartType}
                 options={[
-                  {value: 'bar', label: 'Bar Chart'},
-                  {value: 'horizontal', label: 'Horizontal Bars'},
-                  {value: 'line', label: 'Line Chart'}
+                  { value: 'bar', label: 'Bar Chart' },
+                  { value: 'horizontal', label: 'Horizontal Bars' },
+                  { value: 'line', label: 'Line Chart' },
                 ]}
                 onSelect={(type) => setWeeklyChartType(type)}
               />
-              
+
               <Text className="mb-2 text-xs text-gray-500">
-                {weeklyChartType === 'bar' && 'Bar charts effectively compare discrete time periods'}
-                {weeklyChartType === 'horizontal' && 'Horizontal bars highlight differences between categories'}
+                {weeklyChartType === 'bar' &&
+                  'Bar charts effectively compare discrete time periods'}
+                {weeklyChartType === 'horizontal' &&
+                  'Horizontal bars highlight differences between categories'}
                 {weeklyChartType === 'line' && 'Line charts show week-to-week progression'}
               </Text>
-              
-              <ScrollView horizontal showsHorizontalScrollIndicator={true}>
+
+              <ScrollView horizontal showsHorizontalScrollIndicator>
                 {weeklyChartType === 'bar' && (
                   <BarChart
                     data={getWeeklyBreakdownChartData()}
@@ -637,7 +596,7 @@ export default function MockDataDemo() {
                     fromZero
                   />
                 )}
-                
+
                 {weeklyChartType === 'horizontal' && (
                   <BarChart
                     data={getWeeklyBreakdownChartData()}
@@ -676,7 +635,7 @@ export default function MockDataDemo() {
                     verticalLabelRotation={90}
                   />
                 )}
-                
+
                 {weeklyChartType === 'line' && (
                   <LineChart
                     data={getWeeklyBreakdownChartData()}
@@ -721,35 +680,38 @@ export default function MockDataDemo() {
                   />
                 )}
               </ScrollView>
-              
+
               <Text className="mt-2 text-center text-xs italic text-gray-500">
                 Swipe horizontally to view all weeks
               </Text>
             </View>
           )}
-          
+
           {/* Distribution Chart - Replacing the Pie Chart */}
           <View className="mb-6 rounded-xl bg-white p-4 shadow-sm">
             <Text className="mb-2 text-lg font-bold text-gray-800">
               Application Status Distribution
             </Text>
-            
+
             <ChartTypeSelector
               currentType={distributionChartType}
               options={[
-                {value: 'stacked', label: 'Stacked Bars'},
-                {value: 'horizontal', label: 'Horizontal Bars'},
-                {value: 'progress', label: 'Progress Rings'}
+                { value: 'stacked', label: 'Stacked Bars' },
+                { value: 'horizontal', label: 'Horizontal Bars' },
+                { value: 'progress', label: 'Progress Rings' },
               ]}
               onSelect={(type) => setDistributionChartType(type)}
             />
-            
+
             <Text className="mb-2 text-xs text-gray-500">
-              {distributionChartType === 'stacked' && 'Stacked bars show both absolute values and proportions'}
-              {distributionChartType === 'horizontal' && 'Horizontal bars directly compare quantities'}
-              {distributionChartType === 'progress' && 'Progress rings visualize completion percentages'}
+              {distributionChartType === 'stacked' &&
+                'Stacked bars show both absolute values and proportions'}
+              {distributionChartType === 'horizontal' &&
+                'Horizontal bars directly compare quantities'}
+              {distributionChartType === 'progress' &&
+                'Progress rings visualize completion percentages'}
             </Text>
-            
+
             <View className="items-center">
               {distributionChartType === 'stacked' && (
                 <StackedBarChart
@@ -759,7 +721,7 @@ export default function MockDataDemo() {
                     data: [
                       [12, 18, 8, 4],
                       [9, 15, 12, 6],
-                      [7, 9, 11, 9]
+                      [7, 9, 11, 9],
                     ],
                     barColors: ['#3b82f6', '#8b5cf6', '#22c55e', '#f59e0b'],
                   }}
@@ -793,7 +755,7 @@ export default function MockDataDemo() {
                   hideLegend={false}
                 />
               )}
-              
+
               {distributionChartType === 'horizontal' && (
                 <BarChart
                   data={{
@@ -841,7 +803,7 @@ export default function MockDataDemo() {
                   verticalLabelRotation={90}
                 />
               )}
-              
+
               {distributionChartType === 'progress' && (
                 <ProgressChart
                   data={{
@@ -874,7 +836,7 @@ export default function MockDataDemo() {
                 />
               )}
             </View>
-            
+
             <Text className="mt-2 text-center text-xs italic text-gray-500">
               Distribution across different application status categories
             </Text>
@@ -883,25 +845,23 @@ export default function MockDataDemo() {
 
         <View className="mb-8">
           <Text className="mb-4 text-xl font-semibold text-gray-800">Statistics Cards</Text>
-          
+
           {/* Individual Statistics Cards */}
           {statistics.map((stat, index) => (
             <View key={index} className="mb-4">
               <StatisticsCard statistic={stat} />
             </View>
           ))}
-          
+
           {/* Grouped Statistics Cards */}
           {getStatisticsByMonth().map(({ month, statistics: monthStats }) => (
             <View key={month} className="mb-4 rounded-xl bg-white p-4 shadow-sm">
               <Text className="mb-4 text-lg font-bold text-gray-800">{month}</Text>
-              <View className="rounded-lg overflow-hidden border border-gray-100">
+              <View className="overflow-hidden rounded-lg border border-gray-100">
                 {monthStats.map((stat, index) => (
                   <React.Fragment key={index}>
                     <StatisticsCard statistic={stat} hideMonth />
-                    {index < monthStats.length - 1 && (
-                      <View className="h-[1px] bg-gray-200 mx-4" />
-                    )}
+                    {index < monthStats.length - 1 && <View className="mx-4 h-[1px] bg-gray-200" />}
                   </React.Fragment>
                 ))}
               </View>
@@ -915,4 +875,3 @@ export default function MockDataDemo() {
 function alert(arg0: string) {
   throw new Error('Function not implemented.');
 }
-
