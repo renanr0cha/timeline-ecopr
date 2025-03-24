@@ -17,6 +17,7 @@ A mobile application to help Canadian PR applicants track their immigration jour
 
 ## 🌟 Features
 
+- **🔒 Authentication System**: Secure email-based login, signup, and password recovery
 - **📅 Timeline Tracking**: Record key dates in your PR application process:
   - AOR (Acknowledgement of Receipt) date
   - P2 (Portal 2 login) date
@@ -28,15 +29,15 @@ A mobile application to help Canadian PR applicants track their immigration jour
   - View weekly breakdowns for detailed insights
   - Multiple chart types (Line, Bar, Area) for better data visualization
   - Compare your timeline with community averages
+- **🎨 Modern UI**: Clean, intuitive interface with smooth animations and transitions
 - **🔒 Privacy-Focused**: No user accounts needed, just anonymous device registration
 - **💪 Offline Support**: View your timeline even without an internet connection
-- **🌙 Modern UI**: Clean, intuitive interface with light and dark mode support
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 
-- Node.js (v16 or later)
+- Node.js (v18 or later)
 - npm or yarn
 - Expo CLI: `npm install -g expo-cli`
 - Supabase account (for backend)
