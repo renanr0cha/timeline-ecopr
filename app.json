@@ -1,9 +1,8 @@
 {
   "expo": {
-    "name": "timeline-ecopr",
-    "slug": "timeline-ecopr",
+    "name": "timeline-pr",
+    "slug": "timeline-pr",
     "version": "1.0.0",
-    "entryPoint": "./index.js",
 
     "web": {
       "favicon": "./assets/favicon.png"
@@ -28,20 +27,21 @@
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.timeline.ecopr"
+      "bundleIdentifier": "com.timeline.pr"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.timeline.ecopr"
+      "package": "com.timeline.pr"
     },
     "newArchEnabled": true,
     "extra": {
       "eas": {
-        "projectId": "timeline-ecopr"
+        "projectId": "timeline-pr"
       }
-    }
+    },
+    "scheme": "timelinepr"
   }
 }

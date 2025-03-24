@@ -145,6 +145,60 @@ const getWeeklyBreakdownChartData = () => ({
 - Weekly breakdown section (when month selected)
 - Detailed statistics cards
 
+### Login Screen (`src/screens/login-screen.tsx`)
+
+The authentication screen that handles user login, signup, and password recovery.
+
+**Functionality:**
+- Email and password-based authentication
+- Account registration with email verification
+- Password recovery workflow
+- Smooth transitions between different authentication modes
+
+**User Interface Features:**
+- Animated transitions between sign-in, sign-up, and password reset modes
+- Clean form design with proper validation
+- Descriptive error messages
+- Visual feedback during loading states
+
+**Animation Implementation:**
+- Uses React Native's Animated API for fade and slide transitions
+- Sequenced animations for smoother user experience
+- Cross-fade between different UI states
+
+**Code Example:**
+```typescript
+const transitionToMode = (newMode: 'signin' | 'signup' | 'reset') => {
+  // Start fade out
+  Animated.timing(fadeAnim, {
+    toValue: 0,
+    duration: 200,
+    useNativeDriver: true,
+  }).start(() => {
+    // Change mode after fade out
+    setMode(newMode);
+    
+    // Reset slide position based on transition direction
+    const slideValue = newMode === 'signin' ? -100 : 100;
+    slideAnim.setValue(slideValue);
+    
+    // Start fade in and slide animations
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  });
+};
+```
+
 ## Components
 
 ### ScreenContent
