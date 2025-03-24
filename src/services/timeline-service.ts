@@ -5,7 +5,7 @@ import {
   EntryNotFoundError,
   EntryType,
   TimelineEntry,
-  ValidationError
+  ValidationError,
 } from '../types';
 
 /**
@@ -30,7 +30,9 @@ export const timelineService = {
   ): Promise<TimelineEntry> {
     try {
       // Check if user is authenticated
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session?.user) {
         logger.error('Attempted to add entry without authentication');
         throw new Error('You must be signed in to add entries');
@@ -71,10 +73,7 @@ export const timelineService = {
         updated_at: new Date().toISOString(),
       } as TimelineEntry;
     } catch (error) {
-      if (
-        error instanceof DatabaseError ||
-        error instanceof ValidationError
-      ) {
+      if (error instanceof DatabaseError || error instanceof ValidationError) {
         throw error;
       }
 
@@ -92,7 +91,9 @@ export const timelineService = {
   async getUserTimeline(): Promise<TimelineEntry[]> {
     try {
       // Check if user is authenticated
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session?.user) {
         logger.warn('Attempted to get timeline without authentication');
         return [];
@@ -120,34 +121,10 @@ export const timelineService = {
       }
 
       logger.error('Error getting timeline entries', { error });
-      
+
       // Instead of throwing an error, return an empty array
       return [];
     }
-  },
-
-  /**
-   * Helper method to get entries for a specific device ID
-   * @private
-   */
-  async getEntriesForDeviceId(deviceId: string): Promise<TimelineEntry[]> {
-    const { data, error } = await supabase
-      .from('timeline_entries')
-      .select('*')
-      .eq('device_id', deviceId)
-      .order('entry_date', { ascending: false });
-
-    if (error) {
-      logger.error('Error retrieving timeline entries', { error, deviceId });
-      throw new DatabaseError(error.message, {
-        code: error.code,
-        details: error.details,
-        hint: error.hint,
-      });
-    }
-
-    logger.info('Timeline entries retrieved successfully', { deviceId, count: data?.length || 0 });
-    return data || [];
   },
 
   /**
@@ -159,10 +136,7 @@ export const timelineService = {
    * @throws EntryNotFoundError if entry not found
    * @throws DatabaseError if a database operation fails
    */
-  async updateEntry(
-    entryId: string,
-    updates: Partial<TimelineEntry>
-  ): Promise<TimelineEntry> {
+  async updateEntry(entryId: string, updates: Partial<TimelineEntry>): Promise<TimelineEntry> {
     if (!entryId) {
       logger.warn('Attempted to update entry with empty entryId');
       throw new ValidationError('entryId');
@@ -170,7 +144,9 @@ export const timelineService = {
 
     try {
       // Check if user is authenticated
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session?.user) {
         logger.error('Attempted to update entry without authentication');
         throw new Error('You must be signed in to update entries');
@@ -252,17 +228,16 @@ export const timelineService = {
 
     try {
       // Check if user is authenticated
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session?.user) {
         logger.error('Attempted to delete entry without authentication');
         throw new Error('You must be signed in to delete entries');
       }
 
       // Delete the entry
-      const { data, error } = await supabase
-        .from('timeline_entries')
-        .delete()
-        .eq('id', entryId);
+      const { data, error } = await supabase.from('timeline_entries').delete().eq('id', entryId);
 
       if (error) {
         logger.error('Error deleting timeline entry', { error, entryId });
