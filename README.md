@@ -38,7 +38,7 @@ A mobile application to help Canadian PR applicants track their immigration jour
 ### Prerequisites
 
 - Node.js (v18 or later)
-- npm or yarn
+- npm or pnpm
 - Expo CLI: `npm install -g expo-cli`
 - Supabase account (for backend)
 
@@ -56,7 +56,7 @@ cd timeline-ecopr
 ```bash
 npm install
 # or
-yarn install
+pnpm install
 ```
 
 3. Create a `.env` file in the root directory with your Supabase credentials:
