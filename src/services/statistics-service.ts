@@ -26,38 +26,40 @@ export const statisticsService = {
 
   /**
    * Retrieves personal user statistics for the authenticated user
-   * 
+   *
    * @param transitionType - Optional transition type to focus the statistics on
    * @returns Promise resolving to user transition statistics
    */
   async getUserStatistics(transitionType?: string): Promise<TransitionStatistics | null> {
     try {
       logger.info('Fetching user statistics', { transitionType });
-      
+
       // Check if user is authenticated
-      const { data: { session } } = await supabase.auth.getSession();
-      
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
       if (!session?.user) {
         logger.warn('No authenticated user found when getting statistics');
         return null;
       }
-      
+
       const userId = session.user.id;
-      
+
       // Currently using mock data
       if (this.useMockData) {
         logger.info('Using mock statistics data for user', { userId, transitionType });
         const mockData = getMockTransitionStatistics(transitionType || 'p1');
         return mockData;
       }
-      
+
       // TODO: Implement real data retrieval from Supabase
       // This would query a view or function that calculates statistics based on the user's timeline
       // const { data, error } = await supabase.rpc('get_user_statistics', {
       //   user_id: userId,
       //   transition_type: transitionType || null
       // });
-      
+
       // For now, return mock data
       return getMockTransitionStatistics(transitionType || 'p1');
     } catch (error) {
@@ -100,8 +102,10 @@ export const statisticsService = {
       }
 
       // Check if user is authenticated
-      const { data: { session } } = await supabase.auth.getSession();
-      
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
       if (!session?.user) {
         logger.warn('No authenticated user found when getting community statistics');
         return [];
@@ -111,6 +115,7 @@ export const statisticsService = {
       logger.info('Fetching community statistics', { transitionType });
       const { data, error } = await supabase.rpc('get_community_statistics', {
         filter_transition_type: transitionType || null,
+        user_id: session.user.id,
       });
 
       if (error) {
